@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>usbsmart · SMART data from USB docks on Apple silicon</title>
-<meta name="description" content="A read-only DriverKit driver extension and command that read SMART data from SATA drives in USB docks on Apple silicon Macs. No kext, no Reduced Security.">
-<meta property="og:title" content="usbsmart · SMART data from USB docks on Apple silicon">
-<meta property="og:description" content="A read-only DriverKit driver extension and command that read SMART data from SATA drives in USB docks. No kext, no Reduced Security.">
+<title>usbsmart · Check a hard drive's health through a USB dock on a Mac</title>
+<meta name="description" content="Reads a hard drive's health report (SMART) through a USB dock on Apple silicon Macs, without lowering the Mac's security. Read-only, free, open source.">
+<meta property="og:title" content="usbsmart · Check a hard drive's health through a USB dock on a Mac">
+<meta property="og:description" content="Reads a hard drive's health report (SMART) through a USB dock on Apple silicon Macs, without lowering the Mac's security. Read-only, free, open source.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://joemattiello.dev/usbsmart/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23050506'/%3E%3Cpath d='M5 17h5l3-8 5 14 3-6h6' fill='none' stroke='%2345e6a1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -218,21 +218,19 @@
   <nav class="nav" aria-label="Main">
     <a class="brand" href="#top">usbsmart</a>
     <div class="links">
-      <a href="#status">Status</a>
-      <a href="#how">How it works</a>
-      <a href="#read-only">Read-only</a>
-      <a href="#use">Use</a>
-      <a href="#install">Install</a>
+      <a href="#shows">What it shows</a>
+      <a href="#safe">Safety</a>
+      <a href="#works">What works</a>
+      <a href="#get">Get it</a>
     </div>
     <a class="cta" href="https://github.com/JoeMatt/usbsmart">GitHub</a>
     <button class="burger" aria-label="Menu" aria-expanded="false"></button>
   </nav>
   <div class="overlay">
-    <a href="#status">Status</a>
-    <a href="#how">How it works</a>
-    <a href="#read-only">Read-only</a>
-    <a href="#use">Use</a>
-    <a href="#install">Install</a>
+    <a href="#shows">What it shows</a>
+    <a href="#safe">Safety</a>
+    <a href="#works">What works</a>
+    <a href="#get">Get it</a>
     <a href="https://github.com/JoeMatt/usbsmart">GitHub</a>
   </div>
 </header>
@@ -240,216 +238,160 @@
 <main>
   <section class="hero">
     <div class="wrap">
-      <span class="eyebrow reveal"><i></i>SATA over USB · Apple silicon · DriverKit</span>
-      <h1 class="reveal" style="--d:.08s; max-width: 15ch">SMART data from a USB dock, without a kext.</h1>
-      <p class="lede reveal" style="--d:.16s; max-width: 44rem">macOS gives user programs no way to send ATA commands to a disk behind a USB bridge, so <code>smartctl</code> fails with “Operation not supported by device”, and the usual fix is a kernel extension that only loads with Reduced Security. This is a DriverKit driver extension that reads the pages and a <code>usbsmart</code> command that prints them. SIP stays on.</p>
+      <span class="eyebrow reveal"><i></i>Mac · USB drive docks · Drive health</span>
+      <h1 class="reveal" style="--d:.08s; max-width: 16ch">Check a hard drive's health through a USB dock.</h1>
+      <p class="lede reveal" style="--d:.16s; max-width: 44rem">Every hard drive keeps a health report on itself: hours used, bad spots, temperature. A Mac can't read that report when the drive sits in a USB dock or enclosure, and the apps that can ask you to lower the Mac's security first. <code>usbsmart</code> reads it with the Mac's security left alone.</p>
       <div class="actions reveal" style="--d:.24s">
-        <a class="btn solid" href="https://github.com/JoeMatt/usbsmart">View the source
-          <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4.5 11.5l7-7M5.5 4.5h6v6"/></svg></span></a>
-        <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Install guide
+        <a class="btn solid" href="#get">Get it
           <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
+        <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart">View the source
+          <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4.5 11.5l7-7M5.5 4.5h6v6"/></svg></span></a>
       </div>
-      <p class="fine reveal" style="--d:.32s">Open source under the MIT license. Verified on one dock so far (VIA Labs VL715). Five ATA commands, none of which write.</p>
+      <p class="fine reveal" style="--d:.32s">Free and open source (MIT license). It only reads the report. It cannot erase or change a drive.</p>
 
       <div class="shell term reveal" style="--d:.2s"><div class="core flush">
-        <div class="bar"><i></i><i></i><i></i><span>zsh</span></div>
+        <div class="bar"><i></i><i></i><i></i><span>Terminal</span></div>
 <pre><span class="d">$</span> <span class="h">usbsmart disk9</span>
-usbsmart 0.1.1: disk9
 
 Device Model:     WDC WD5000AACS-00ZUB0
-Firmware Version: 01.01B01
 User Capacity:    500,107,862,016 bytes [500.11 GB]
-Sector Size:      512 bytes logical/physical
 SMART support:    Available, enabled
 
-SMART overall-health: <span class="p">PASSED</span> <span class="d">(worked out from the attribute thresholds; the bridge did not return the drive's registers)</span>
+SMART overall-health: <span class="p">PASSED</span>
 
-SMART Attributes Data Structure revision number: 16
-Vendor Specific SMART Attributes with Thresholds:
 <span class="h">ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE</span>
-  1 Raw_Read_Error_Rate     0x000f   200   200   051    Pre-fail  Always       -       0
-  3 Spin_Up_Time            0x0003   171   159   021    Pre-fail  Always       -       4425
-  4 Start_Stop_Count        0x0032   <span class="a">022   022</span>   000    Old_age   Always       -       78269
   5 Reallocated_Sector_Ct   0x0033   200   200   140    Pre-fail  Always       -       0
-  7 Seek_Error_Rate         0x000e   200   200   051    Old_age   Always       -       0
   9 Power_On_Hours          0x0032   <span class="a">001   001</span>   000    Old_age   Always       -       87079
- 10 Spin_Retry_Count        0x0012   100   100   051    Old_age   Always       -       0
- 11 Calibration_Retry_Count 0x0012   100   100   051    Old_age   Always       -       0
  12 Power_Cycle_Count       0x0032   098   098   000    Old_age   Always       -       2264
-192 Power-Off_Retract_Count 0x0032   198   198   000    Old_age   Always       -       1763
-193 Load_Cycle_Count        0x0032   <span class="a">022   022</span>   000    Old_age   Always       -       536651
 194 Temperature_Celsius     0x0022   122   075   000    Old_age   Always       -       25
-196 Reallocated_Event_Count 0x0032   200   200   000    Old_age   Always       -       0
 197 Current_Pending_Sector  0x0012   200   200   000    Old_age   Always       -       0
 198 Offline_Uncorrectable   0x0010   200   200   000    Old_age   Offline      -       0
-199 UDMA_CRC_Error_Count    0x003e   200   200   000    Old_age   Always       -       0
-200 Multi_Zone_Error_Rate   0x0008   200   200   051    Old_age   Offline      -       0</pre>
+199 UDMA_CRC_Error_Count    0x003e   200   200   000    Old_age   Always       -       0</pre>
       </div></div>
-      <p class="caption reveal">Output from a WD Caviar Green in the dock, 87,079 power-on hours in. Serial and WWN lines removed, the verdict line shortened.</p>
+      <p class="caption reveal">A 500 GB WD drive in the dock after 87,079 hours switched on, almost 10 years. Trimmed to seven of its 17 rows.</p>
     </div>
   </section>
 
-  <section id="status">
+  <section id="shows">
     <div class="wrap">
       <div class="head">
         <div>
-          <span class="eyebrow reveal">Status</span>
-          <h2 class="reveal" style="--d:.08s">One dock verified, everything else marked untested.</h2>
+          <span class="eyebrow reveal">What it shows</span>
+          <h2 class="reveal" style="--d:.08s">The numbers that say whether to trust a drive.</h2>
         </div>
-        <p class="reveal" style="--d:.16s">Tested on a MacBook Pro (M2 Max), macOS 27.2.1, SIP enabled, Full Security, with a Sabrent USB 3 SATA dock (VIA Labs VL715, <code>0x2109:0x0715</code>) holding a 500 GB WD Caviar Green, then an 8 TB Seagate <code>ST8000DM004</code>.</p>
+        <p class="reveal" style="--d:.16s">The full table has up to 30 rows. These are the ones to read first. Under the table, the tool lists any number that looks wrong and says in plain words what it means.</p>
+      </div>
+      <div class="bento">
+        <div class="shell wide reveal"><div class="core">
+          <span class="state ok"><i></i>The verdict</span>
+          <p class="pull">PASSED or FAILED, judged against the limits the drive's maker set for each number.</p>
+          <p>A number at or past its limit is marked <code>FAILING_NOW</code>. Copy the data off that drive before doing anything else with it.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state warn"><i></i>Bad spots</span>
+          <h3>Worn-out parts of the disk</h3>
+          <p>Spots that stopped holding data and were swapped for spares, and spots waiting to be swapped. Both should read 0. A count that keeps climbing means the drive is on its way out.</p>
+        </div></div>
+        <div class="shell reveal"><div class="core">
+          <span class="state info"><i></i>Age</span>
+          <h3>How much life it has had</h3>
+          <p>Hours switched on and the number of times it has been powered up. The drive above shows 87,079 hours and 2,264 power-ups.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state info"><i></i>Heat</span>
+          <h3>Temperature</h3>
+          <p>In Celsius, right now. Some drives also report the hottest and coldest they have been.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.16s"><div class="core">
+          <span class="state info"><i></i>Cable trouble</span>
+          <h3>Garbled transfers</h3>
+          <p>A count of data that arrived damaged between the drive and whatever it was plugged into. Above 0 usually points at a cable or connector, with the drive itself fine.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="safe">
+    <div class="wrap split">
+      <div class="sticky">
+        <span class="eyebrow reveal">Safety</span>
+        <h2 class="reveal" style="--d:.08s">It reads. That is all it does.</h2>
+        <p class="lede reveal" style="--d:.16s">A drive you are worried about may hold the only copy of something, so the tool was built unable to write to one.</p>
+      </div>
+      <div class="shell reveal"><div class="core">
+        <span class="state ok"><i></i>Read-only</span>
+        <ul class="list" style="margin-top:1rem">
+          <li><span class="n">01</span><div><strong>Five commands, all of them reads</strong><span>It asks the drive who it is and for its health report. There is no command in it for erasing, formatting, testing or updating a drive.</span></div></li>
+          <li><span class="n">02</span><div><strong>Every command is checked before it goes out</strong><span>Anything that is not one of the five is refused and never reaches the drive.</span></div></li>
+          <li><span class="n">03</span><div><strong>Your Mac's security stays as it is</strong><span>No kernel extension and no Reduced Security, and System Integrity Protection stays on. You approve it once in System Settings, with the same switch any driver uses.</span></div></li>
+          <li><span class="n">04</span><div><strong>The drive works as before</strong><span>It still shows up in Finder and Disk Utility, and macOS still opens it like any other drive you plug in.</span></div></li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+
+  <section id="works">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="eyebrow reveal">What works</span>
+          <h2 class="reveal" style="--d:.08s">One dock tested so far.</h2>
+        </div>
+        <p class="reveal" style="--d:.16s">Tested on a MacBook Pro (M2 Max) running macOS 27.2.1, with a Sabrent USB 3 dock holding a 500 GB WD drive and then an 8 TB Seagate.</p>
       </div>
       <div class="bento">
         <div class="shell wide reveal"><div class="core">
           <span class="state ok"><i></i>Works</span>
-          <p class="pull">The driver takes the dock's disk in place of Apple's disk driver, and the disk still shows up as <span class="mono">disk9</span> and mounts as before.</p>
-          <p>Development-signed, activated from an app in <code>/Applications</code>, approved once under Driver Extensions.</p>
+          <p class="pull">Put a drive in the dock, type <span class="mono">usbsmart disk9</span> in Terminal, read the table.</p>
+          <p>Typing <code>usbsmart</code> on its own lists the drives it can read, with their model and size.</p>
         </div></div>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state ok"><i></i>Works</span>
-          <h3>Identity, attributes, thresholds, logs</h3>
-          <p><code>IDENTIFY DEVICE</code>, <code>SMART READ DATA</code>, <code>SMART READ THRESHOLDS</code> and <code>SMART READ LOG</code> each return their 512-byte page. The error log and self-test log decode through smartctl 7.5.</p>
+          <h3>The full report</h3>
+          <p>Add <code>--smartctl</code> and the free <a href="https://www.smartmontools.org/">smartctl</a> tool decodes the same data with its database of drive models, including the drive's own error log.</p>
         </div></div>
         <div class="shell reveal"><div class="core">
-          <span class="state warn"><i></i>Partial</span>
-          <h3>The drive's own verdict</h3>
-          <p><code>SMART RETURN STATUS</code> completes, but the VL715 hands back sense data with no ATA registers in it (<code>70 00 00 00 00 00 00 0a</code>, then zeros), so pass or fail is worked out from the thresholds. smartctl prints the same fallback: “based on an Attribute check”.</p>
+          <span class="state warn"><i></i>One caveat</span>
+          <h3>The verdict is worked out</h3>
+          <p>This dock does not pass along the drive's own one-word verdict, so PASSED or FAILED comes from comparing each number with its limit. smartctl does the same in that case.</p>
         </div></div>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state warn"><i></i>Untested</span>
-          <h3>Other bridges</h3>
-          <p>Only the VL715 has a personality in <code>Info.plist</code>, and macOS drives it over Bulk-Only Transport. Bridges on UAS are untried, and there is a <a href="https://developer.apple.com/forums/thread/802099">developer forum report</a> of <code>UserSendCDB</code> moving no data over UAS.</p>
+          <h3>Other docks</h3>
+          <p>Each dock has a chip inside that has to be listed by name. One is listed today: the VIA Labs VL715 found in Sabrent docks. Adding another takes a few lines and a rebuild.</p>
         </div></div>
         <div class="shell reveal" style="--d:.16s"><div class="core">
           <span class="state no"><i></i>Not supported</span>
-          <h3>Out of scope</h3>
-          <p>NVMe-to-USB bridges (different commands), self-tests, switching SMART on or off, firmware. A drive with SMART switched off returns no attributes and stays that way.</p>
+          <h3>What it can't read</h3>
+          <p>NVMe SSDs (the stick-shaped kind) keep a different report. Intel Macs are out: the driver is built for Apple silicon only.</p>
+        </div></div>
+        <div class="shell wide reveal"><div class="core">
+          <span class="state info"><i></i>For developers</span>
+          <h3>How it works</h3>
+          <p>It is a DriverKit driver extension plus a command-line tool. The driver design, the matching rules and the signing setup are written up in the <a href="https://github.com/JoeMatt/usbsmart#how-it-works">README</a>.</p>
         </div></div>
       </div>
     </div>
   </section>
 
-  <section id="how">
-    <div class="wrap">
-      <div class="head">
-        <div>
-          <span class="eyebrow reveal">How it works</span>
-          <h2 class="reveal" style="--d:.08s">One layer of the disk stack is replaced.</h2>
-        </div>
-        <p class="reveal" style="--d:.16s"><code>USBSmartDevice</code> subclasses <code>IOUserSCSIPeripheralDeviceType00</code> from SCSIPeripheralsDriverKit. Its kernel half is Apple's own disk driver, so reads and writes never pass through this project's code. The subclass adds <code>UserSendCDB</code>, which carries ATA PASS-THROUGH (16) to the bridge.</p>
-      </div>
-      <div class="bento">
-        <div class="shell wide reveal"><div class="core flush">
-<pre>IOUSBHostInterface                    <span class="d">the dock's USB interface</span>
-  IOUSBMassStorageDriver              <span class="d">Apple's USB mass-storage driver, unchanged</span>
-    IOSCSIPeripheralDeviceNub         <span class="d">one SCSI logical unit</span>
-      <span class="p">USBSmartDevice</span>                  <span class="d">in place of Apple's IOSCSIPeripheralDeviceType00</span>
-        IOBlockStorageServices
-          IOMedia                     <span class="d">disk9</span></pre>
-        </div></div>
-        <div class="shell reveal" style="--d:.08s"><div class="core">
-          <span class="state info"><i></i>Matching</span>
-          <h3>Outranking Apple's driver</h3>
-          <p>Both personalities match <code>Peripheral Device Type</code> 0. The SCSI family adds a personality's <code>IOProbeScore</code> to its own ranking (clamped below 5000), so <code>1000</code> outranks Apple's personality, which has none.</p>
-        </div></div>
-        <div class="shell reveal"><div class="core">
-          <span class="state info"><i></i>Matching</span>
-          <h3>Limited to one dock</h3>
-          <p><code>IOParentMatch -> IOPropertyMatch</code> on <code>idVendor</code> 8457 and <code>idProduct</code> 1813 limits the match to disks with that USB device among their ancestors. Without it the driver would attach to every disk on the Mac.</p>
-        </div></div>
-        <div class="shell reveal" style="--d:.08s"><div class="core">
-          <span class="state ok"><i></i>Signing</span>
-          <h3>No request to Apple</h3>
-          <p>Three entitlements: <code>driverkit</code>, <code>driverkit.family.scsicontroller</code> and <code>driverkit.allow-any-userclient-access</code>. Xcode's automatic signing adds all three to a development profile. No USB transport entitlement, because the driver never opens the USB interface.</p>
-        </div></div>
-        <div class="shell reveal" style="--d:.16s"><div class="core">
-          <span class="state warn"><i></i>Found on the way</span>
-          <h3>A zero in Apple's helper</h3>
-          <p><code>SMART_Get_Identify_Data</code> on DriverKit 27.0 was building <code>85 08 0e 00 00 00 00 … ec 00</code>: ATA sector count 0, while <code>t_length</code> says the count field holds the transfer length. The driver sets the count to 1, the form smartmontools sends, before the command goes out.</p>
-        </div></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="read-only">
+  <section id="get">
     <div class="wrap split">
       <div class="sticky">
-        <span class="eyebrow reveal">Read-only</span>
-        <h2 class="reveal" style="--d:.08s">Five commands, all of them reads.</h2>
-        <p class="lede reveal" style="--d:.16s">Each command is built by Apple's helpers, then checked byte by byte against this list before it is sent (<code>IsAllowedCDB</code> in <code>Driver/USBSmartDevice.cpp</code>). A command that fails the check comes back to the tool unsent, with its 16 bytes. The drives this was written for may hold the only copy of someone's data.</p>
-      </div>
-      <div class="shell reveal"><div class="core">
-        <span class="state ok"><i></i>ATA PASS-THROUGH (16), opcode 85h</span>
-        <ul class="list" style="margin-top:1rem">
-          <li><span class="n">01</span><div><strong>IDENTIFY DEVICE</strong><span><code>ECh</code>. Model, serial, firmware, capacity, sector sizes. 512 bytes in.</span></div></li>
-          <li><span class="n">02</span><div><strong>SMART READ DATA</strong><span><code>B0h / D0h</code>. Up to 30 attributes of 12 bytes each. 512 bytes in.</span></div></li>
-          <li><span class="n">03</span><div><strong>SMART READ THRESHOLDS</strong><span><code>B0h / D1h</code>. The failure threshold for each attribute. 512 bytes in.</span></div></li>
-          <li><span class="n">04</span><div><strong>SMART READ LOG</strong><span><code>B0h / D5h</code>. One sector of one log: directory, error log, self-test log.</span></div></li>
-          <li><span class="n">05</span><div><strong>SMART RETURN STATUS</strong><span><code>B0h / DAh</code>. No data, the answer comes back in the LBA registers.</span></div></li>
-        </ul>
-        <p style="margin-top:1.4rem">macOS itself still mounts any volume it recognises on the disk, read-write, as it does without the driver.</p>
-      </div></div>
-    </div>
-  </section>
-
-  <section id="use">
-    <div class="wrap">
-      <div class="head">
-        <div>
-          <span class="eyebrow reveal">Use</span>
-          <h2 class="reveal" style="--d:.08s">A table by default, smartctl for its drive database.</h2>
-        </div>
-        <p class="reveal" style="--d:.16s">smartctl can replay a recorded session: given <code>-</code> as the device, it reads <code>smartctl -r ataioctl,2</code> debug text on standard input and decodes it as if it had talked to the drive. <code>usbsmart --smartctl</code> writes the pages it read in that format and pipes them in.</p>
-      </div>
-      <div class="bento">
-        <div class="shell half reveal"><div class="core">
-          <span class="state info"><i></i>Command line</span>
-          <h3><span class="mono">usbsmart</span></h3>
-          <p class="mono" style="font-size:.78rem; line-height:1.9; word-break:break-word">usbsmart<br>usbsmart disk9<br>usbsmart disk9 --smartctl -x<br>usbsmart disk9 --save pages/<br>usbsmart --decode pages/<br>usbsmart disk9 --raw<br>usbsmart disk9 --debug</p>
-          <p>No arguments lists the disks the driver is attached to. <code>--save</code> writes the raw pages as <code>.bin</code> files and <code>--decode</code> reads them back with no drive attached. <code>--debug</code> shows each command sent and the bridge's answer.</p>
-        </div></div>
-        <div class="shell half reveal" style="--d:.08s"><div class="core">
-          <span class="state info"><i></i>First run</span>
-          <h3>A dock that kept dropping the disk</h3>
-          <p>The disk in the test dock detached and re-attached 14 times in under 6 minutes. <code>Power_Cycle_Count</code> stayed at 2264 and <code>Start_Stop_Count</code> at 78269 across all of them, the ATA error log was empty and <code>UDMA_CRC_Error_Count</code> was 0. The drive never lost power, which puts the dropouts on the USB side (dock, cable or port). The same cycle is in the system log from before the driver was installed.</p>
-        </div></div>
-        <div class="shell reveal"><div class="core">
-          <span class="state info"><i></i>Scripts</span>
-          <h3>Exit status 4</h3>
-          <p>Returned when the drive reports failure: its own verdict, or an attribute at or below its threshold. 0 is success, 1 an error, 2 bad usage.</p>
-        </div></div>
-        <div class="shell reveal" style="--d:.08s"><div class="core">
-          <span class="state info"><i></i>Under the table</span>
-          <h3>Counters that should be zero</h3>
-          <p>Nine attributes are called out when their raw count is above zero, with what each means: remapped sectors (5), pending sectors (197), uncorrectable errors (187), interface CRC errors (199) and five more.</p>
-        </div></div>
-        <div class="shell reveal" style="--d:.16s"><div class="core">
-          <span class="state ok"><i></i>No hardware needed</span>
-          <h3>Decoder check</h3>
-          <p><code>tests/decoder.sh</code> builds a made-up set of pages with valid checksums, decodes them and diffs the result against <code>tests/expected.txt</code>. It runs in CI after the unsigned build.</p>
-        </div></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="install">
-    <div class="wrap split">
-      <div class="sticky">
-        <span class="eyebrow reveal">Install</span>
-        <h2 class="reveal" style="--d:.08s">There is no download. You build it once a year.</h2>
-        <p class="lede reveal" style="--d:.16s">A development-signed driver runs only on Macs registered in your own developer account, and the signing lasts 12 months. Xcode registers the two identifiers, the capabilities and the Mac during the build, so there is nothing to tick in the developer portal.</p>
+        <span class="eyebrow reveal">Get it</span>
+        <h2 class="reveal" style="--d:.08s">There is no download yet. You build it once a year.</h2>
+        <p class="lede reveal" style="--d:.16s">Apple decides who may hand out drivers. Anyone with a paid developer account can build this for their own Macs, and the build expires after 12 months. For now that makes it a tool for people comfortable pasting commands into Terminal.</p>
         <div class="actions reveal" style="--d:.24s; margin-top:2rem; display:flex">
           <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Step-by-step guide
             <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
         </div>
       </div>
       <div class="shell reveal"><div class="core">
-        <span class="state info"><i></i>Two commands to build, one switch to approve</span>
+        <span class="state info"><i></i>What you need</span>
         <ul class="list" style="margin-top:1rem">
-          <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on 27.2.1 only.</span></div></li>
-          <li><span class="n">02</span><div><strong>A SATA drive in a USB dock</strong><span>With a VL715 bridge today. Another bridge is one more personality in <code>Info.plist</code>: two USB IDs.</span></div></li>
-          <li><span class="n">03</span><div><strong>A paid Apple Developer Program membership</strong><span>US $99 a year. Apple does not allow driver capabilities on free accounts.</span></div></li>
-          <li><span class="n">04</span><div><strong>Xcode and XcodeGen</strong><span><code>brew install xcodegen</code>, then <code>xcodegen generate</code> and one <code>xcodebuild</code> line from the README.</span></div></li>
-          <li><span class="n">05</span><div><strong>smartmontools, if you want <code>--smartctl</code></strong><span><code>brew install smartmontools</code>. The built-in table needs nothing else.</span></div></li>
+          <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on an M2 Max with macOS 27.2.1 only.</span></div></li>
+          <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>Any SATA drive. The dock needs the VL715 chip for now.</span></div></li>
+          <li><span class="n">03</span><div><strong>A paid Apple Developer Program membership</strong><span>US $99 a year. Apple does not allow drivers on free accounts.</span></div></li>
+          <li><span class="n">04</span><div><strong>Xcode and Homebrew</strong><span>Both free. You change a few lines to your own developer ID, paste five commands into Terminal and flip one switch in System Settings.</span></div></li>
         </ul>
       </div></div>
     </div>

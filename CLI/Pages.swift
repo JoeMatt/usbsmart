@@ -121,6 +121,8 @@ struct Attribute {
             return rawWord(1) == 0 ? "\(rawWord(0))" : "\(rawWord(0)) (Average \(rawWord(1)))"
         case 5, 196:    // Count in word 0; the upper words carry vendor extras.
             return rawWord(1) == 0 && rawWord(2) == 0 ? "\(rawWord(0))" : "\(rawWord(0)) (\(rawWord(2)) \(rawWord(1)))"
+        case 188:   // Three 16-bit counters on Seagate drives; a plain count elsewhere.
+            return rawWord(1) == 0 && rawWord(2) == 0 ? "\(rawWord(0))" : "\(rawWord(0)) \(rawWord(1)) \(rawWord(2))"
         case 9, 240:    // Hours in the low 24 bits.
             let hours = raw48 & 0xFFFFFF
             return raw[3] == 0 && raw[4] == 0 && raw[5] == 0 ? "\(hours)" : "\(hours) (\(raw[5]) \(raw[4]) \(raw[3]))"

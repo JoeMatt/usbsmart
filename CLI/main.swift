@@ -217,8 +217,8 @@ func printReport(_ capture: Capture) {
 
     let concerns = table.attributes.compactMap { attribute -> String? in
         guard let meaning = countersToWatch[attribute.id] else { return nil }
-        // Count in the low 16 bits for 5 and 196 (the rest is vendor data), whole value otherwise.
-        let count = attribute.id == 5 || attribute.id == 196 ? attribute.raw48 & 0xFFFF : attribute.raw48
+        // Count in the low 16 bits for 5, 188 and 196 (the rest is vendor data), whole value otherwise.
+        let count = [5, 188, 196].contains(attribute.id) ? attribute.raw48 & 0xFFFF : attribute.raw48
         guard count > 0 else { return nil }
         let name = attributeNames[attribute.id] ?? "Unknown_Attribute"
         return String(format: "  %3d %@ = %llu: %@", attribute.id, name, count, meaning)

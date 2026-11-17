@@ -37,7 +37,8 @@ Worth a look (these counters are zero on a healthy drive):
 ## Status
 
 Verified on one setup: MacBook Pro (M2 Max), macOS 27.2.1, SIP enabled, Full Security, a
-Sabrent USB 3 SATA dock (VIA Labs VL715, `0x2109:0x0715`) holding a WD Caviar Green.
+Sabrent USB 3 SATA dock (VIA Labs VL715, `0x2109:0x0715`) holding a WD Caviar Green and, later, a
+Seagate ST8000DM004.
 
 | What | Result |
 |---|---|

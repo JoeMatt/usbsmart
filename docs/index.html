@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>usbsmart · SMART data from USB docks on Apple silicon</title>
+<meta name="description" content="A read-only DriverKit driver extension and command that read SMART data from SATA drives in USB docks on Apple silicon Macs. No kext, no Reduced Security.">
+<meta property="og:title" content="usbsmart · SMART data from USB docks on Apple silicon">
+<meta property="og:description" content="A read-only DriverKit driver extension and command that read SMART data from SATA drives in USB docks. No kext, no Reduced Security.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://joemattiello.dev/usbsmart/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23050506'/%3E%3Cpath d='M5 17h5l3-8 5 14 3-6h6' fill='none' stroke='%2345e6a1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #050506;
+    --text: rgba(255,255,255,.94);
+    --muted: rgba(255,255,255,.58);
+    --faint: rgba(255,255,255,.36);
+    --hair: rgba(255,255,255,.08);
+    --emerald: #45e6a1;
+    --amber: #ffb84d;
+    --coral: #ff6b66;
+    --ice: #85bdff;
+    --spring: cubic-bezier(.32,.72,0,1);
+    --sans: "Geist", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink); color: var(--text); font-family: var(--sans);
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; height: auto; }
+
+  /* Fixed atmosphere: two colour fields and film grain, never repainted on scroll. */
+  .atmosphere { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(60rem 40rem at 8% -10%, rgba(69,230,161,.15), transparent 60%),
+      radial-gradient(55rem 45rem at 100% 110%, rgba(133,189,255,.13), transparent 60%); }
+  .atmosphere::after { content: ""; position: absolute; inset: 0; opacity: .045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  main, footer { position: relative; z-index: 1; }
+  .wrap { width: min(1180px, 100% - 3rem); margin-inline: auto; }
+  section { padding-block: clamp(6rem, 12vw, 10rem); }
+
+  /* Type */
+  .eyebrow { display: inline-flex; align-items: center; gap: .5rem; padding: .3rem .8rem; border-radius: 999px;
+    font-size: 10px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+    background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px var(--hair); }
+  .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
+  h1, h2, h3 { font-weight: 500; letter-spacing: -.035em; line-height: 1.02; text-wrap: balance; }
+  h1 { font-size: clamp(2.9rem, 7.2vw, 5.6rem); margin-top: 1.6rem; }
+  h2 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); margin-top: 1.3rem; }
+  h3 { font-size: 1.3rem; letter-spacing: -.02em; line-height: 1.2; }
+  .lede { font-size: clamp(1.05rem, 1.5vw, 1.25rem); color: var(--muted); max-width: 34rem; margin-top: 1.6rem; font-weight: 300; }
+  .dim { color: var(--faint); }
+  code, .mono { font-family: var(--mono); font-size: .85em; }
+
+  /* Buttons: pill, with the icon in its own well flush to the trailing edge. */
+  .btn { display: inline-flex; align-items: center; gap: .9rem; padding: .45rem .45rem .45rem 1.4rem; border-radius: 999px;
+    font-size: .95rem; font-weight: 500; transition: transform .6s var(--spring), background-color .6s var(--spring); }
+  .btn span.well { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%;
+    transition: transform .6s var(--spring); }
+  .btn svg { width: 14px; height: 14px; }
+  .btn:hover .well { transform: translate(3px,-1px) scale(1.06); }
+  .btn:active { transform: scale(.98); }
+  .btn.solid { background: #fff; color: #000; }
+  .btn.solid .well { background: rgba(0,0,0,.09); }
+  .btn.ghost { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+  .btn.ghost:hover { background: rgba(255,255,255,.1); }
+  .btn.ghost .well { background: rgba(255,255,255,.1); }
+
+  /* Floating island nav */
+  .nav { position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%); z-index: 40;
+    display: flex; align-items: center; gap: 1.6rem; padding: .45rem .45rem .45rem 1.2rem; border-radius: 999px;
+    background: rgba(12,12,14,.6); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), inset 0 1px 0 rgba(255,255,255,.1); white-space: nowrap; }
+  .nav .brand { font-family: var(--mono); font-size: .8rem; letter-spacing: -.01em; }
+  .nav .links { display: flex; gap: 1.4rem; font-size: .85rem; color: var(--muted); }
+  .nav .links a { transition: color .5s var(--spring); }
+  .nav .links a:hover { color: var(--text); }
+  .nav .cta { padding: .5rem 1rem; border-radius: 999px; background: #fff; color: #000; font-size: .82rem; font-weight: 500;
+    transition: transform .6s var(--spring); }
+  .nav .cta:active { transform: scale(.97); }
+  .burger { display: none; position: relative; width: 2.3rem; height: 2.3rem; border: 0; border-radius: 50%;
+    background: rgba(255,255,255,.08); cursor: pointer; }
+  .burger::before, .burger::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 1.25px; background: #fff;
+    transition: transform .6s var(--spring); }
+  .burger::before { transform: translate(-50%, -3.5px); }
+  .burger::after { transform: translate(-50%, 3.5px); }
+  .open .burger::before { transform: translate(-50%, 0) rotate(45deg); }
+  .open .burger::after { transform: translate(-50%, 0) rotate(-45deg); }
+  .overlay { position: fixed; inset: 0; z-index: 30; display: grid; align-content: center; gap: .4rem; padding: 2rem;
+    background: rgba(5,5,6,.82); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    opacity: 0; pointer-events: none; transition: opacity .6s var(--spring); }
+  .open .overlay { opacity: 1; pointer-events: auto; }
+  .overlay a { font-size: 2.4rem; font-weight: 500; letter-spacing: -.03em; opacity: 0; transform: translateY(3rem);
+    transition: transform .8s var(--spring), opacity .8s var(--spring); }
+  .open .overlay a { opacity: 1; transform: none; }
+  .open .overlay a:nth-child(1) { transition-delay: .08s; }
+  .open .overlay a:nth-child(2) { transition-delay: .14s; }
+  .open .overlay a:nth-child(3) { transition-delay: .20s; }
+  .open .overlay a:nth-child(4) { transition-delay: .26s; }
+  .open .overlay a:nth-child(5) { transition-delay: .32s; }
+  .open .overlay a:nth-child(6) { transition-delay: .38s; }
+
+  /* Double bezel: a glass plate (core) seated in a tray (shell), concentric corners. */
+  .shell { --r: 2rem; --pad: .4rem; padding: var(--pad); border-radius: var(--r);
+    background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+  .core { height: 100%; border-radius: calc(var(--r) - var(--pad)); padding: clamp(1.4rem, 2.4vw, 2rem);
+    background: rgba(255,255,255,.035);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.04); }
+  .core.flush { padding: 0; overflow: hidden; background: #0a0b0d; }
+
+  /* Hero */
+  .hero { padding-top: 11rem; padding-bottom: 5rem; }
+  .hero .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2.4rem; }
+  .hero .fine { margin-top: 2.2rem; font-size: .8rem; color: var(--faint); max-width: 30rem; }
+  .cascade { position: relative; aspect-ratio: 1 / 1.02; }
+  .cascade .shell { position: absolute; width: 78%; --r: 1.5rem; --pad: .3rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 40px 120px -30px rgba(69,230,161,.18);
+    transition: transform 1s var(--spring); }
+  .cascade .back { right: 0; top: 0; transform: rotate(3deg); opacity: .8; }
+  .cascade .front { left: 0; bottom: 0; transform: rotate(-2deg); }
+  .cascade:hover .back { transform: rotate(4.5deg) translate(1.2%, -1.2%); }
+  .cascade:hover .front { transform: rotate(-1deg) translate(-1%, 1%); }
+
+  /* Status bento */
+  .head { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 2rem; align-items: end; margin-bottom: 3.5rem; }
+  .head p { color: var(--muted); font-weight: 300; }
+  .bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; }
+  .bento > * { grid-column: span 4; }
+  .bento .wide { grid-column: span 8; }
+  .bento .half { grid-column: span 6; }
+  .state { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; }
+  .state i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .ok { color: var(--emerald); } .warn { color: var(--amber); } .no { color: var(--coral); } .info { color: var(--ice); }
+  .core h3 { margin-top: 1.4rem; }
+  .core p { margin-top: .7rem; color: var(--muted); font-size: .95rem; font-weight: 300; }
+  .core p.pull { font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1.2; letter-spacing: -.03em; font-weight: 400; color: var(--text) !important; margin-top: 1.4rem !important; }
+
+  /* Requirements */
+  .split { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(2rem, 6vw, 6rem); align-items: start; }
+  .split .sticky { position: sticky; top: 7rem; }
+  .list { list-style: none; padding: 0; }
+  .list li { display: grid; grid-template-columns: 3rem 1fr; gap: 1rem; padding: 1.4rem 0; box-shadow: inset 0 -1px 0 var(--hair); }
+  .list li:last-child { box-shadow: none; }
+  .list .n { font-family: var(--mono); font-size: .75rem; color: var(--faint); padding-top: .3rem; }
+  .list strong { font-weight: 500; }
+  .list span { display: block; color: var(--muted); font-size: .93rem; font-weight: 300; margin-top: .2rem; }
+
+  /* Contribute */
+  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.2rem; }
+  .tag { font-family: var(--mono); font-size: .68rem; padding: .2rem .6rem; border-radius: 999px; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); }
+  .doc { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; box-shadow: inset 0 -1px 0 var(--hair);
+    transition: transform .6s var(--spring); }
+  .doc:last-child { box-shadow: none; }
+  .doc:hover { transform: translateX(6px); }
+  .doc b { font-weight: 500; display: block; }
+  .doc small { color: var(--muted); font-size: .85rem; font-weight: 300; }
+  .doc svg { width: 16px; height: 16px; flex: none; color: var(--faint); }
+
+  footer { padding: 3rem 0 4rem; color: var(--faint); font-size: .82rem; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding-top: 2rem; box-shadow: inset 0 1px 0 var(--hair); }
+  footer a { color: var(--muted); transition: color .5s var(--spring); }
+  footer a:hover { color: var(--text); }
+
+  /* Scroll entry */
+  .reveal { opacity: 0; transform: translateY(3.5rem); filter: blur(10px);
+    transition: opacity 1s var(--spring), transform 1s var(--spring), filter 1s var(--spring); transition-delay: var(--d, 0s); }
+  .reveal.in { opacity: 1; transform: none; filter: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; filter: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 767px) {
+    .wrap { width: calc(100% - 2rem); }
+    section { padding-block: 5rem; }
+    .nav { gap: .8rem; }
+    .nav .links, .nav .cta { display: none; }
+    .burger { display: block; }
+    .hero { padding-top: 7rem; }
+    .hero .grid, .head, .split { grid-template-columns: 1fr; }
+    .cascade { aspect-ratio: auto; display: grid; gap: 1rem; }
+    .cascade .shell { position: static; width: 100%; transform: none !important; opacity: 1; }
+    .bento > *, .bento .wide, .bento .half { grid-column: span 12; }
+    .split .sticky { position: static; }
+  }
+
+  /* Terminal output and diagrams: a flush core with scrolling monospace. */
+  .term { margin-top: clamp(3rem, 6vw, 5rem); --r: 1.5rem; --pad: .3rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 40px 120px -30px rgba(69,230,161,.18); }
+  .term .bar { display: flex; align-items: center; gap: .45rem; padding: .8rem 1.1rem; box-shadow: inset 0 -1px 0 var(--hair);
+    font-family: var(--mono); font-size: .72rem; color: var(--faint); }
+  .term .bar i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.14); }
+  .term .bar span { margin-left: .6rem; }
+  pre { font-family: var(--mono); font-size: clamp(.62rem, 1.05vw, .8rem); line-height: 1.65; color: rgba(255,255,255,.8);
+    padding: 1.2rem 1.4rem 1.5rem; overflow-x: auto; white-space: pre; tab-size: 4; }
+  pre .p { color: var(--emerald); } pre .d { color: var(--faint); } pre .h { color: var(--text); } pre .a { color: var(--amber); }
+  .caption { margin-top: 1rem; font-size: .8rem; color: var(--faint); }
+  .core p a, .lede a, .head p a { box-shadow: inset 0 -1px 0 rgba(255,255,255,.3); transition: box-shadow .5s var(--spring); }
+  .core p a:hover, .lede a:hover, .head p a:hover { box-shadow: inset 0 -1px 0 var(--emerald); }
+  .list code { color: var(--muted); }
+</style>
+<noscript><style>.reveal { opacity: 1; transform: none; filter: none; }</style></noscript>
+</head>
+<body>
+<div class="atmosphere"></div>
+
+<header id="top">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="#top">usbsmart</a>
+    <div class="links">
+      <a href="#status">Status</a>
+      <a href="#how">How it works</a>
+      <a href="#read-only">Read-only</a>
+      <a href="#use">Use</a>
+      <a href="#install">Install</a>
+    </div>
+    <a class="cta" href="https://github.com/JoeMatt/usbsmart">GitHub</a>
+    <button class="burger" aria-label="Menu" aria-expanded="false"></button>
+  </nav>
+  <div class="overlay">
+    <a href="#status">Status</a>
+    <a href="#how">How it works</a>
+    <a href="#read-only">Read-only</a>
+    <a href="#use">Use</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/JoeMatt/usbsmart">GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow reveal"><i></i>SATA over USB · Apple silicon · DriverKit</span>
+      <h1 class="reveal" style="--d:.08s; max-width: 15ch">SMART data from a USB dock, without a kext.</h1>
+      <p class="lede reveal" style="--d:.16s; max-width: 44rem">macOS gives user programs no way to send ATA commands to a disk behind a USB bridge, so <code>smartctl</code> fails with “Operation not supported by device”, and the usual fix is a kernel extension that only loads with Reduced Security. This is a DriverKit driver extension that reads the pages and a <code>usbsmart</code> command that prints them. SIP stays on.</p>
+      <div class="actions reveal" style="--d:.24s">
+        <a class="btn solid" href="https://github.com/JoeMatt/usbsmart">View the source
+          <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4.5 11.5l7-7M5.5 4.5h6v6"/></svg></span></a>
+        <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Install guide
+          <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
+      </div>
+      <p class="fine reveal" style="--d:.32s">Open source under the MIT license. Verified on one dock so far (VIA Labs VL715). Five ATA commands, none of which write.</p>
+
+      <div class="shell term reveal" style="--d:.2s"><div class="core flush">
+        <div class="bar"><i></i><i></i><i></i><span>zsh</span></div>
+<pre><span class="d">$</span> <span class="h">usbsmart disk9</span>
+usbsmart 0.1.1: disk9
+
+Device Model:     WDC WD5000AACS-00ZUB0
+Firmware Version: 01.01B01
+User Capacity:    500,107,862,016 bytes [500.11 GB]
+Sector Size:      512 bytes logical/physical
+SMART support:    Available, enabled
+
+SMART overall-health: <span class="p">PASSED</span> <span class="d">(worked out from the attribute thresholds; the bridge did not return the drive's registers)</span>
+
+SMART Attributes Data Structure revision number: 16
+Vendor Specific SMART Attributes with Thresholds:
+<span class="h">ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE</span>
+  1 Raw_Read_Error_Rate     0x000f   200   200   051    Pre-fail  Always       -       0
+  3 Spin_Up_Time            0x0003   171   159   021    Pre-fail  Always       -       4425
+  4 Start_Stop_Count        0x0032   <span class="a">022   022</span>   000    Old_age   Always       -       78269
+  5 Reallocated_Sector_Ct   0x0033   200   200   140    Pre-fail  Always       -       0
+  7 Seek_Error_Rate         0x000e   200   200   051    Old_age   Always       -       0
+  9 Power_On_Hours          0x0032   <span class="a">001   001</span>   000    Old_age   Always       -       87079
+ 10 Spin_Retry_Count        0x0012   100   100   051    Old_age   Always       -       0
+ 11 Calibration_Retry_Count 0x0012   100   100   051    Old_age   Always       -       0
+ 12 Power_Cycle_Count       0x0032   098   098   000    Old_age   Always       -       2264
+192 Power-Off_Retract_Count 0x0032   198   198   000    Old_age   Always       -       1763
+193 Load_Cycle_Count        0x0032   <span class="a">022   022</span>   000    Old_age   Always       -       536651
+194 Temperature_Celsius     0x0022   122   075   000    Old_age   Always       -       25
+196 Reallocated_Event_Count 0x0032   200   200   000    Old_age   Always       -       0
+197 Current_Pending_Sector  0x0012   200   200   000    Old_age   Always       -       0
+198 Offline_Uncorrectable   0x0010   200   200   000    Old_age   Offline      -       0
+199 UDMA_CRC_Error_Count    0x003e   200   200   000    Old_age   Always       -       0
+200 Multi_Zone_Error_Rate   0x0008   200   200   051    Old_age   Offline      -       0</pre>
+      </div></div>
+      <p class="caption reveal">Output from a WD Caviar Green in the dock, 87,079 power-on hours in. Serial and WWN lines removed, the verdict line shortened.</p>
+    </div>
+  </section>
+
+  <section id="status">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="eyebrow reveal">Status</span>
+          <h2 class="reveal" style="--d:.08s">One dock verified, everything else marked untested.</h2>
+        </div>
+        <p class="reveal" style="--d:.16s">Tested on a MacBook Pro (M2 Max), macOS 27.2.1, SIP enabled, Full Security, with a Sabrent USB 3 SATA dock (VIA Labs VL715, <code>0x2109:0x0715</code>) holding a 500 GB WD Caviar Green, then an 8 TB Seagate <code>ST8000DM004</code>.</p>
+      </div>
+      <div class="bento">
+        <div class="shell wide reveal"><div class="core">
+          <span class="state ok"><i></i>Works</span>
+          <p class="pull">The driver takes the dock's disk in place of Apple's disk driver, and the disk still shows up as <span class="mono">disk9</span> and mounts as before.</p>
+          <p>Development-signed, activated from an app in <code>/Applications</code>, approved once under Driver Extensions.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state ok"><i></i>Works</span>
+          <h3>Identity, attributes, thresholds, logs</h3>
+          <p><code>IDENTIFY DEVICE</code>, <code>SMART READ DATA</code>, <code>SMART READ THRESHOLDS</code> and <code>SMART READ LOG</code> each return their 512-byte page. The error log and self-test log decode through smartctl 7.5.</p>
+        </div></div>
+        <div class="shell reveal"><div class="core">
+          <span class="state warn"><i></i>Partial</span>
+          <h3>The drive's own verdict</h3>
+          <p><code>SMART RETURN STATUS</code> completes, but the VL715 hands back sense data with no ATA registers in it (<code>70 00 00 00 00 00 00 0a</code>, then zeros), so pass or fail is worked out from the thresholds. smartctl prints the same fallback: “based on an Attribute check”.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state warn"><i></i>Untested</span>
+          <h3>Other bridges</h3>
+          <p>Only the VL715 has a personality in <code>Info.plist</code>, and macOS drives it over Bulk-Only Transport. Bridges on UAS are untried, and there is a <a href="https://developer.apple.com/forums/thread/802099">developer forum report</a> of <code>UserSendCDB</code> moving no data over UAS.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.16s"><div class="core">
+          <span class="state no"><i></i>Not supported</span>
+          <h3>Out of scope</h3>
+          <p>NVMe-to-USB bridges (different commands), self-tests, switching SMART on or off, firmware. A drive with SMART switched off returns no attributes and stays that way.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="eyebrow reveal">How it works</span>
+          <h2 class="reveal" style="--d:.08s">One layer of the disk stack is replaced.</h2>
+        </div>
+        <p class="reveal" style="--d:.16s"><code>USBSmartDevice</code> subclasses <code>IOUserSCSIPeripheralDeviceType00</code> from SCSIPeripheralsDriverKit. Its kernel half is Apple's own disk driver, so reads and writes never pass through this project's code. The subclass adds <code>UserSendCDB</code>, which carries ATA PASS-THROUGH (16) to the bridge.</p>
+      </div>
+      <div class="bento">
+        <div class="shell wide reveal"><div class="core flush">
+<pre>IOUSBHostInterface                    <span class="d">the dock's USB interface</span>
+  IOUSBMassStorageDriver              <span class="d">Apple's USB mass-storage driver, unchanged</span>
+    IOSCSIPeripheralDeviceNub         <span class="d">one SCSI logical unit</span>
+      <span class="p">USBSmartDevice</span>                  <span class="d">in place of Apple's IOSCSIPeripheralDeviceType00</span>
+        IOBlockStorageServices
+          IOMedia                     <span class="d">disk9</span></pre>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state info"><i></i>Matching</span>
+          <h3>Outranking Apple's driver</h3>
+          <p>Both personalities match <code>Peripheral Device Type</code> 0. The SCSI family adds a personality's <code>IOProbeScore</code> to its own ranking (clamped below 5000), so <code>1000</code> outranks Apple's personality, which has none.</p>
+        </div></div>
+        <div class="shell reveal"><div class="core">
+          <span class="state info"><i></i>Matching</span>
+          <h3>Limited to one dock</h3>
+          <p><code>IOParentMatch -> IOPropertyMatch</code> on <code>idVendor</code> 8457 and <code>idProduct</code> 1813 limits the match to disks with that USB device among their ancestors. Without it the driver would attach to every disk on the Mac.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state ok"><i></i>Signing</span>
+          <h3>No request to Apple</h3>
+          <p>Three entitlements: <code>driverkit</code>, <code>driverkit.family.scsicontroller</code> and <code>driverkit.allow-any-userclient-access</code>. Xcode's automatic signing adds all three to a development profile. No USB transport entitlement, because the driver never opens the USB interface.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.16s"><div class="core">
+          <span class="state warn"><i></i>Found on the way</span>
+          <h3>A zero in Apple's helper</h3>
+          <p><code>SMART_Get_Identify_Data</code> on DriverKit 27.0 was building <code>85 08 0e 00 00 00 00 … ec 00</code>: ATA sector count 0, while <code>t_length</code> says the count field holds the transfer length. The driver sets the count to 1, the form smartmontools sends, before the command goes out.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="read-only">
+    <div class="wrap split">
+      <div class="sticky">
+        <span class="eyebrow reveal">Read-only</span>
+        <h2 class="reveal" style="--d:.08s">Five commands, all of them reads.</h2>
+        <p class="lede reveal" style="--d:.16s">Each command is built by Apple's helpers, then checked byte by byte against this list before it is sent (<code>IsAllowedCDB</code> in <code>Driver/USBSmartDevice.cpp</code>). A command that fails the check comes back to the tool unsent, with its 16 bytes. The drives this was written for may hold the only copy of someone's data.</p>
+      </div>
+      <div class="shell reveal"><div class="core">
+        <span class="state ok"><i></i>ATA PASS-THROUGH (16), opcode 85h</span>
+        <ul class="list" style="margin-top:1rem">
+          <li><span class="n">01</span><div><strong>IDENTIFY DEVICE</strong><span><code>ECh</code>. Model, serial, firmware, capacity, sector sizes. 512 bytes in.</span></div></li>
+          <li><span class="n">02</span><div><strong>SMART READ DATA</strong><span><code>B0h / D0h</code>. Up to 30 attributes of 12 bytes each. 512 bytes in.</span></div></li>
+          <li><span class="n">03</span><div><strong>SMART READ THRESHOLDS</strong><span><code>B0h / D1h</code>. The failure threshold for each attribute. 512 bytes in.</span></div></li>
+          <li><span class="n">04</span><div><strong>SMART READ LOG</strong><span><code>B0h / D5h</code>. One sector of one log: directory, error log, self-test log.</span></div></li>
+          <li><span class="n">05</span><div><strong>SMART RETURN STATUS</strong><span><code>B0h / DAh</code>. No data, the answer comes back in the LBA registers.</span></div></li>
+        </ul>
+        <p style="margin-top:1.4rem">macOS itself still mounts any volume it recognises on the disk, read-write, as it does without the driver.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section id="use">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="eyebrow reveal">Use</span>
+          <h2 class="reveal" style="--d:.08s">A table by default, smartctl for its drive database.</h2>
+        </div>
+        <p class="reveal" style="--d:.16s">smartctl can replay a recorded session: given <code>-</code> as the device, it reads <code>smartctl -r ataioctl,2</code> debug text on standard input and decodes it as if it had talked to the drive. <code>usbsmart --smartctl</code> writes the pages it read in that format and pipes them in.</p>
+      </div>
+      <div class="bento">
+        <div class="shell half reveal"><div class="core">
+          <span class="state info"><i></i>Command line</span>
+          <h3><span class="mono">usbsmart</span></h3>
+          <p class="mono" style="font-size:.78rem; line-height:1.9; word-break:break-word">usbsmart<br>usbsmart disk9<br>usbsmart disk9 --smartctl -x<br>usbsmart disk9 --save pages/<br>usbsmart --decode pages/<br>usbsmart disk9 --raw<br>usbsmart disk9 --debug</p>
+          <p>No arguments lists the disks the driver is attached to. <code>--save</code> writes the raw pages as <code>.bin</code> files and <code>--decode</code> reads them back with no drive attached. <code>--debug</code> shows each command sent and the bridge's answer.</p>
+        </div></div>
+        <div class="shell half reveal" style="--d:.08s"><div class="core">
+          <span class="state info"><i></i>First run</span>
+          <h3>A dock that kept dropping the disk</h3>
+          <p>The disk in the test dock detached and re-attached 14 times in under 6 minutes. <code>Power_Cycle_Count</code> stayed at 2264 and <code>Start_Stop_Count</code> at 78269 across all of them, the ATA error log was empty and <code>UDMA_CRC_Error_Count</code> was 0. The drive never lost power, which puts the dropouts on the USB side (dock, cable or port). The same cycle is in the system log from before the driver was installed.</p>
+        </div></div>
+        <div class="shell reveal"><div class="core">
+          <span class="state info"><i></i>Scripts</span>
+          <h3>Exit status 4</h3>
+          <p>Returned when the drive reports failure: its own verdict, or an attribute at or below its threshold. 0 is success, 1 an error, 2 bad usage.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state info"><i></i>Under the table</span>
+          <h3>Counters that should be zero</h3>
+          <p>Nine attributes are called out when their raw count is above zero, with what each means: remapped sectors (5), pending sectors (197), uncorrectable errors (187), interface CRC errors (199) and five more.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.16s"><div class="core">
+          <span class="state ok"><i></i>No hardware needed</span>
+          <h3>Decoder check</h3>
+          <p><code>tests/decoder.sh</code> builds a made-up set of pages with valid checksums, decodes them and diffs the result against <code>tests/expected.txt</code>. It runs in CI after the unsigned build.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap split">
+      <div class="sticky">
+        <span class="eyebrow reveal">Install</span>
+        <h2 class="reveal" style="--d:.08s">There is no download. You build it once a year.</h2>
+        <p class="lede reveal" style="--d:.16s">A development-signed driver runs only on Macs registered in your own developer account, and the signing lasts 12 months. Xcode registers the two identifiers, the capabilities and the Mac during the build, so there is nothing to tick in the developer portal.</p>
+        <div class="actions reveal" style="--d:.24s; margin-top:2rem; display:flex">
+          <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Step-by-step guide
+            <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
+        </div>
+      </div>
+      <div class="shell reveal"><div class="core">
+        <span class="state info"><i></i>Two commands to build, one switch to approve</span>
+        <ul class="list" style="margin-top:1rem">
+          <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on 27.2.1 only.</span></div></li>
+          <li><span class="n">02</span><div><strong>A SATA drive in a USB dock</strong><span>With a VL715 bridge today. Another bridge is one more personality in <code>Info.plist</code>: two USB IDs.</span></div></li>
+          <li><span class="n">03</span><div><strong>A paid Apple Developer Program membership</strong><span>US $99 a year. Apple does not allow driver capabilities on free accounts.</span></div></li>
+          <li><span class="n">04</span><div><strong>Xcode and XcodeGen</strong><span><code>brew install xcodegen</code>, then <code>xcodegen generate</code> and one <code>xcodebuild</code> line from the README.</span></div></li>
+          <li><span class="n">05</span><div><strong>smartmontools, if you want <code>--smartctl</code></strong><span><code>brew install smartmontools</code>. The built-in table needs nothing else.</span></div></li>
+        </ul>
+      </div></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 <a href="https://github.com/JoeMatt">Joseph Mattiello</a>. MIT licensed. Sibling project: <a href="https://joemattiello.dev/drobo-driverkit/">drobo-driverkit</a>.</span>
+    <span><a href="https://github.com/JoeMatt/usbsmart">github.com/JoeMatt/usbsmart</a></span>
+  </div>
+</footer>
+
+<script>
+  const header = document.querySelector('header');
+  const burger = document.querySelector('.burger');
+  const setOpen = open => { header.classList.toggle('open', open); burger.setAttribute('aria-expanded', open); };
+  burger.addEventListener('click', () => setOpen(!header.classList.contains('open')));
+  document.querySelectorAll('.overlay a').forEach(a => a.addEventListener('click', () => setOpen(false)));
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('in'); observer.unobserve(entry.target); } });
+  }, { threshold: 0.08, rootMargin: '0px 0px -4% 0px' });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

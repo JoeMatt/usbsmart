@@ -219,7 +219,8 @@
     <a class="brand" href="#top">usbsmart</a>
     <div class="links">
       <a href="#shows">What it shows</a>
-      <a href="#safe">Safety</a>
+      <a href="#how">How it works</a>
+      <a href="#read-only">Read-only</a>
       <a href="#works">What works</a>
       <a href="#get">Get it</a>
     </div>
@@ -228,7 +229,8 @@
   </nav>
   <div class="overlay">
     <a href="#shows">What it shows</a>
-    <a href="#safe">Safety</a>
+    <a href="#how">How it works</a>
+    <a href="#read-only">Read-only</a>
     <a href="#works">What works</a>
     <a href="#get">Get it</a>
     <a href="https://github.com/JoeMatt/usbsmart">GitHub</a>
@@ -311,21 +313,75 @@ SMART overall-health: <span class="p">PASSED</span>
     </div>
   </section>
 
-  <section id="safe">
+  <section id="how">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="eyebrow reveal">How it works</span>
+          <h2 class="reveal" style="--d:.08s">One layer of the disk stack is replaced.</h2>
+        </div>
+        <p class="reveal" style="--d:.16s"><code>USBSmartDevice</code> subclasses <code>IOUserSCSIPeripheralDeviceType00</code> from SCSIPeripheralsDriverKit. Its kernel half is Apple's own disk driver, so reads and writes never pass through this project's code. The subclass adds <code>UserSendCDB</code>, which carries ATA PASS-THROUGH (16) to the bridge.</p>
+      </div>
+      <div class="bento">
+        <div class="shell wide reveal"><div class="core flush">
+<pre>IOUSBHostInterface                    <span class="d">the dock's USB interface</span>
+  IOUSBMassStorageDriver              <span class="d">Apple's USB mass-storage driver, unchanged</span>
+    IOSCSIPeripheralDeviceNub         <span class="d">one SCSI logical unit</span>
+      <span class="p">USBSmartDevice</span>                  <span class="d">in place of Apple's IOSCSIPeripheralDeviceType00</span>
+        IOBlockStorageServices
+          IOMedia                     <span class="d">disk9</span></pre>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state info"><i></i>Matching</span>
+          <h3>Outranking Apple's driver</h3>
+          <p>Both personalities match <code>Peripheral Device Type</code> 0. The SCSI family adds a personality's <code>IOProbeScore</code> to its own ranking (clamped below 5000), so <code>1000</code> outranks Apple's personality, which has none.</p>
+        </div></div>
+        <div class="shell reveal"><div class="core">
+          <span class="state info"><i></i>Matching</span>
+          <h3>Limited to one dock</h3>
+          <p><code>IOParentMatch -> IOPropertyMatch</code> on <code>idVendor</code> 8457 and <code>idProduct</code> 1813 limits the match to disks with that USB device among their ancestors. Without it the driver would attach to every disk on the Mac.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.08s"><div class="core">
+          <span class="state ok"><i></i>Signing</span>
+          <h3>No request to Apple</h3>
+          <p>Three entitlements: <code>driverkit</code>, <code>driverkit.family.scsicontroller</code> and <code>driverkit.allow-any-userclient-access</code>. Xcode's automatic signing adds all three to a development profile. No USB transport entitlement, because the driver never opens the USB interface.</p>
+        </div></div>
+        <div class="shell reveal" style="--d:.16s"><div class="core">
+          <span class="state warn"><i></i>Found on the way</span>
+          <h3>A zero in Apple's helper</h3>
+          <p><code>SMART_Get_Identify_Data</code> on DriverKit 27.0 was building <code>85 08 0e 00 00 00 00 … ec 00</code>: ATA sector count 0, while <code>t_length</code> says the count field holds the transfer length. The driver sets the count to 1, the form smartmontools sends, before the command goes out.</p>
+        </div></div>
+        <div class="shell half reveal"><div class="core">
+          <span class="state info"><i></i>Decoding</span>
+          <h3>smartctl, fed a recording</h3>
+          <p>smartctl can replay a recorded session: given <code>-</code> as the device, it reads <code>smartctl -r ataioctl,2</code> debug text on standard input and decodes it as if it had talked to the drive. <code>usbsmart --smartctl</code> writes the pages it read in that format and pipes them in.</p>
+        </div></div>
+        <div class="shell half reveal" style="--d:.08s"><div class="core">
+          <span class="state ok"><i></i>No hardware needed</span>
+          <h3>Decoder check</h3>
+          <p><code>tests/decoder.sh</code> builds a made-up set of pages with valid checksums, decodes them and diffs the result against <code>tests/expected.txt</code>. It runs in CI after the unsigned build.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="read-only">
     <div class="wrap split">
       <div class="sticky">
-        <span class="eyebrow reveal">Safety</span>
-        <h2 class="reveal" style="--d:.08s">It reads. That is all it does.</h2>
-        <p class="lede reveal" style="--d:.16s">A drive you are worried about may hold the only copy of something, so the tool was built unable to write to one.</p>
+        <span class="eyebrow reveal">Read-only</span>
+        <h2 class="reveal" style="--d:.08s">Five commands, all of them reads.</h2>
+        <p class="lede reveal" style="--d:.16s">Each command is built by Apple's helpers, then checked byte by byte against this list before it is sent (<code>IsAllowedCDB</code> in <code>Driver/USBSmartDevice.cpp</code>). A command that fails the check comes back to the tool unsent, with its 16 bytes. The drives this was written for may hold the only copy of someone's data.</p>
       </div>
       <div class="shell reveal"><div class="core">
-        <span class="state ok"><i></i>Read-only</span>
+        <span class="state ok"><i></i>ATA PASS-THROUGH (16), opcode 85h</span>
         <ul class="list" style="margin-top:1rem">
-          <li><span class="n">01</span><div><strong>Five commands, all of them reads</strong><span>It asks the drive who it is and for its health report. There is no command in it for erasing, formatting, testing or updating a drive.</span></div></li>
-          <li><span class="n">02</span><div><strong>Every command is checked before it goes out</strong><span>Anything that is not one of the five is refused and never reaches the drive.</span></div></li>
-          <li><span class="n">03</span><div><strong>Your Mac's security stays as it is</strong><span>No kernel extension and no Reduced Security, and System Integrity Protection stays on. You approve it once in System Settings, with the same switch any driver uses.</span></div></li>
-          <li><span class="n">04</span><div><strong>The drive works as before</strong><span>It still shows up in Finder and Disk Utility, and macOS still opens it like any other drive you plug in.</span></div></li>
+          <li><span class="n">01</span><div><strong>IDENTIFY DEVICE</strong><span><code>ECh</code>. Model, serial, firmware, capacity, sector sizes. 512 bytes in.</span></div></li>
+          <li><span class="n">02</span><div><strong>SMART READ DATA</strong><span><code>B0h / D0h</code>. Up to 30 attributes of 12 bytes each. 512 bytes in.</span></div></li>
+          <li><span class="n">03</span><div><strong>SMART READ THRESHOLDS</strong><span><code>B0h / D1h</code>. The failure threshold for each attribute. 512 bytes in.</span></div></li>
+          <li><span class="n">04</span><div><strong>SMART READ LOG</strong><span><code>B0h / D5h</code>. One sector of one log: directory, error log, self-test log.</span></div></li>
+          <li><span class="n">05</span><div><strong>SMART RETURN STATUS</strong><span><code>B0h / DAh</code>. No data, the answer comes back in the LBA registers.</span></div></li>
         </ul>
+        <p style="margin-top:1.4rem">macOS itself still mounts any volume it recognises on the disk, read-write, as it does without the driver.</p>
       </div></div>
     </div>
   </section>
@@ -366,9 +422,9 @@ SMART overall-health: <span class="p">PASSED</span>
           <p>NVMe SSDs (the stick-shaped kind) keep a different report. Intel Macs are out: the driver is built for Apple silicon only.</p>
         </div></div>
         <div class="shell wide reveal"><div class="core">
-          <span class="state info"><i></i>For developers</span>
-          <h3>How it works</h3>
-          <p>It is a DriverKit driver extension plus a command-line tool. The driver design, the matching rules and the signing setup are written up in the <a href="https://github.com/JoeMatt/usbsmart#how-it-works">README</a>.</p>
+          <span class="state ok"><i></i>Security</span>
+          <h3>Your Mac's settings stay as they are</h3>
+          <p>No kernel extension and no Reduced Security, and System Integrity Protection stays on. You approve the driver once in System Settings, with the same switch any driver uses. The drive still shows up in Finder and Disk Utility as before.</p>
         </div></div>
       </div>
     </div>

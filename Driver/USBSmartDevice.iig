@@ -1,0 +1,37 @@
+//
+//  USBSmartDevice.iig
+//
+//  The disk driver for a SATA drive behind a USB bridge. The kernel half is Apple's
+//  IOUserSCSIPeripheralDeviceType00, which is the normal disk driver plus a door for custom
+//  commands; this half only uses that door to read SMART pages.
+//
+
+#ifndef USBSmartDevice_h
+#define USBSmartDevice_h
+
+#include <Availability.h>
+#include <DriverKit/IOService.iig>
+#include <DriverKit/IOUserClient.iig>
+#include <SCSIPeripheralsDriverKit/IOUserSCSIPeripheralDeviceType00.iig>
+
+#include "USBSmartShared.h"
+
+class USBSmartDevice : public IOUserSCSIPeripheralDeviceType00
+{
+public:
+    virtual bool init() override;
+    virtual void free() override;
+
+    virtual kern_return_t Start(IOService * provider) override;
+    virtual kern_return_t Stop(IOService * provider) override;
+
+    virtual kern_return_t NewUserClient(uint32_t type, IOUserClient ** userClient) override;
+
+    // Runs one USBSmartCommand and fills the reply. Called by USBSmartUserClient.
+    kern_return_t RunCommand(uint32_t command, uint32_t argument, USBSmartReply * reply) LOCALONLY;
+
+protected:
+    virtual kern_return_t UserDetermineDeviceCharacteristics(bool * result) override;
+};
+
+#endif /* USBSmartDevice_h */

@@ -1,0 +1,38 @@
+
+Device Model:     TESTDISK FIXTURE 8TB
+Serial Number:    TESTSERIAL0001
+Firmware Version: FW01
+LU WWN Device Id: 5000cca212345678
+User Capacity:    8,001,563,222,016 bytes [8.00 TB]
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+Rotation Rate:    7200 rpm
+SMART support:    Available, enabled
+
+SMART overall-health self-assessment test result: PASSED
+
+SMART Attributes Data Structure revision number: 16
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
+  1 Raw_Read_Error_Rate     0x000b   100   100   016    Pre-fail  Always       -       0
+  3 Spin_Up_Time            0x0007   131   100   024    Pre-fail  Always       -       433 (Average 450)
+  4 Start_Stop_Count        0x0012   100   100   000    Old_age   Always       -       512
+  5 Reallocated_Sector_Ct   0x0033   100   100   005    Pre-fail  Always       -       24
+  7 Seek_Error_Rate         0x000b   100   100   067    Pre-fail  Always       -       0
+  9 Power_On_Hours          0x0012   094   094   000    Old_age   Always       -       43210
+ 10 Spin_Retry_Count        0x0013   100   100   060    Pre-fail  Always       -       0
+ 12 Power_Cycle_Count       0x0032   100   100   000    Old_age   Always       -       498
+187 Reported_Uncorrect      0x0032   098   098   000    Old_age   Always       -       2
+192 Power-Off_Retract_Count 0x0032   100   100   000    Old_age   Always       -       900
+193 Load_Cycle_Count        0x0012   100   100   000    Old_age   Always       -       900
+194 Temperature_Celsius     0x0002   171   171   000    Old_age   Always       -       35 (Min/Max 20/52)
+196 Reallocated_Event_Count 0x0032   100   100   000    Old_age   Always       -       24
+197 Current_Pending_Sector  0x0022   100   100   000    Old_age   Always       -       8
+198 Offline_Uncorrectable   0x0008   100   100   000    Old_age   Offline      -       0
+199 UDMA_CRC_Error_Count    0x000a   200   200   000    Old_age   Always       -       3
+
+Worth a look (these counters are zero on a healthy drive):
+    5 Reallocated_Sector_Ct = 24: sectors already remapped to spares
+  187 Reported_Uncorrect = 2: errors the drive could not correct
+  196 Reallocated_Event_Count = 24: remap operations attempted
+  197 Current_Pending_Sector = 8: unstable sectors waiting to be remapped
+  199 UDMA_CRC_Error_Count = 3: interface CRC errors (cable or connector, not the platters)

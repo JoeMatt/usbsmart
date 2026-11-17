@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.driverkit</key>
+	<true/>
+	<!-- SCSIPeripheralsDriverKit uses the SCSI controller family entitlement (see the header
+	     comment in IOUserSCSIPeripheralDeviceType00.iig). No USB transport entitlement: the
+	     driver sits above Apple's USB mass-storage driver, not on the USB interface. -->
+	<key>com.apple.developer.driverkit.family.scsicontroller</key>
+	<true/>
+	<!-- Lets the `usbsmart` command open a connection to the driver. -->
+	<key>com.apple.developer.driverkit.allow-any-userclient-access</key>
+	<true/>
+</dict>
+</plist>

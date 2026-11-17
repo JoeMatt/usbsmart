@@ -1,0 +1,75 @@
+name: USBSmart
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: S32Z3HMYVQ
+    CODE_SIGN_STYLE: Automatic
+    # Bump both for any driver change: macOS will not replace an installed extension that has
+    # the same version.
+    MARKETING_VERSION: "0.1.1"
+    CURRENT_PROJECT_VERSION: "2"
+targets:
+  USBSmartHost:
+    type: application
+    platform: macOS
+    sources:
+      - Host
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart
+        PRODUCT_NAME: USBSmart
+        # Not the default (USBSmart): on a case-insensitive disk that is the same file as the
+        # embedded `usbsmart` command, and one would overwrite the other.
+        EXECUTABLE_NAME: USBSmartApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Joseph Mattiello"
+        CODE_SIGN_ENTITLEMENTS: Host/USBSmartHost.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_VERSION: "5.0"
+    dependencies:
+      - target: USBSmartCLI
+        embed: true
+        copy:
+          destination: executables
+      - target: USBSmartDriver
+        embed: true
+        codeSign: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Library/SystemExtensions
+  # `usbsmart`, embedded in the app at Contents/MacOS/usbsmart.
+  USBSmartCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - CLI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.cli
+        PRODUCT_NAME: usbsmart
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_VERSION: "5.0"
+  USBSmartDriver:
+    type: driver-extension
+    platform: macOS
+    sources:
+      - Driver
+    settings:
+      base:
+        SDKROOT: driverkit
+        DRIVERKIT_DEPLOYMENT_TARGET: "23.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.driver
+        PRODUCT_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
+        INFOPLIST_FILE: Driver/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Driver/USBSmartDriver.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+        # Never add arm64e: an arm64e slice breaks loading with SIP on.
+        ARCHS: arm64
+    dependencies:
+      - sdk: DriverKit.framework
+      - sdk: SCSIPeripheralsDriverKit.framework

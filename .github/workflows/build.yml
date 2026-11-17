@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile (unsigned) and check the decoder
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i driverkit
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # A compile check only. An unsigned driver extension cannot be loaded by macOS,
+      # so no artifact is published from this job.
+      - name: Build
+        run: |
+          xcodebuild -project USBSmart.xcodeproj -scheme USBSmartHost \
+            -configuration Release -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build
+
+      - name: Decoder check
+        run: tests/decoder.sh "$PWD/build/Build/Products/Release/usbsmart"

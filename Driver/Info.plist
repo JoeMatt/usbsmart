@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>OSBundleUsageDescription</key>
+	<string>Reads SMART health data from SATA drives in USB docks. Read-only.</string>
+	<key>IOKitPersonalities</key>
+	<dict>
+		<!--
+		  One personality per USB-SATA bridge. Each one replaces Apple's generic disk driver
+		  (IOSCSIPeripheralDeviceType00) for that bridge's disks with the DriverKit version of
+		  the same class, so the disk behaves exactly as before and the dext gains UserSendCDB.
+
+		  How the match works:
+		  - IOProviderClass + "Peripheral Device Type" 0 is what Apple's own personality matches.
+		  - IOProbeScore is added to the SCSI family's ranking (any value from 1 to 4999), so
+		    this personality outranks Apple's, which has none.
+		  - IOParentMatch limits it to disks that have an ancestor with these USB IDs. Without
+		    it the driver would take over every disk on the Mac.
+		-->
+		<key>VIALabsVL715</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleIdentifierKernel</key>
+			<string>com.apple.iokit.IOSCSIBlockCommandsDevice</string>
+			<key>IOClass</key>
+			<string>IOUserSCSIPeripheralDeviceType00</string>
+			<key>IOProviderClass</key>
+			<string>IOSCSIPeripheralDeviceNub</string>
+			<key>IOUserClass</key>
+			<string>USBSmartDevice</string>
+			<key>IOUserServerName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>Peripheral Device Type</key>
+			<integer>0</integer>
+			<key>IOProbeScore</key>
+			<integer>1000</integer>
+			<key>IOParentMatch</key>
+			<dict>
+				<key>IOPropertyMatch</key>
+				<dict>
+					<!-- VIA Labs VL715 (0x2109:0x0715), e.g. Sabrent USB 3 SATA docks. -->
+					<key>idVendor</key>
+					<integer>8457</integer>
+					<key>idProduct</key>
+					<integer>1813</integer>
+				</dict>
+			</dict>
+			<key>UserClientProperties</key>
+			<dict>
+				<key>IOClass</key>
+				<string>IOUserUserClient</string>
+				<key>IOUserClass</key>
+				<string>USBSmartUserClient</string>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

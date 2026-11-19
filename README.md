@@ -103,7 +103,7 @@ and SHA-256 checksums. The manual release workflow creates a draft release and s
 until distribution signing is configured.
 
 The [release instructions](packaging/release-instructions.txt) cover local signing and optional
-CI secrets. No signing keys have been uploaded. Unsigned preview DMGs are packaging checks,
+CI secrets. Signing and notarization credentials are configured; distribution profiles are pending. Unsigned preview DMGs are packaging checks,
 and cannot activate their driver under normal macOS security. A clean-Mac driver installation
 still needs testing after Apple grants distribution.
 

@@ -6,7 +6,10 @@ LOCAL RELEASE (no certificate/key export required)
 
 1. After Apple approves, enable the distribution capabilities on the existing app IDs. Create Developer ID provisioning profiles for the host app and its driver using the same Developer ID Application certificate. Download both profiles outside this repository. Development profiles will be rejected.
 
-2. Select a Developer ID Application certificate already in the local keychain:
+2. Signing identity and notarization defaults are configured locally. Load them with:
+   source ~/.config/driver-releases/signing.local.env
+
+   To inspect available Developer ID Application certificates:
    security find-identity -v -p codesigning
 
    Set RELEASE_IDENTITY to its 40-character SHA-1 fingerprint (or its certificate name). A fingerprint avoids ambiguity when several certificates share a name.
@@ -42,9 +45,11 @@ A manual Release workflow is included and disabled by default. It expects these 
   ASC_ISSUER_ID
   ASC_KEY_P8_BASE64
 
-The p12 must contain the Developer ID Application certificate and private key used by both profiles. Store these in GitHub Actions secrets only if CI signing is wanted; local packaging needs no private-key upload. Base64 is encoding, not encryption. No credentials or profiles have been uploaded by this preparation.
+The p12 must contain the Developer ID Application certificate and private key used by both profiles. Store these in GitHub Actions secrets only if CI signing is wanted; local packaging needs no private-key upload. Base64 is encoding, not encryption. Local signing and notarization are configured and tested. Notarization API secrets are stored in both repositories. Uploading the Developer ID identity to Actions still requires approval of the macOS private-key export prompt. Distribution profiles remain pending Apple approval. Secrets are not stored in Git.
 
-After approval and secret setup, set repository variable RELEASE_SIGNING_ENABLED=true. Run the manual Release workflow with the exact version from project.yml. It creates verified DMG/ZIP/checksum artifacts and a DRAFT GitHub release, tied to the workflow commit. Signing credentials live in a temporary keychain and are removed by an always-run cleanup step. There is no automatic public release on tag push.
+A credentials_only=true run validates the Developer ID certificate, private key, secure timestamp and notarization authentication without building or uploading an app, DMG or release. RELEASE_IDENTITY selects the exact certificate fingerprint. Keep RELEASE_SIGNING_ENABLED=false during this check.
+
+After approval and profile setup, set repository variable RELEASE_SIGNING_ENABLED=true. Run the manual Release workflow with the exact version from project.yml. It creates verified DMG/ZIP/checksum artifacts and a DRAFT GitHub release, tied to the workflow commit. Signing credentials live in a temporary keychain and are removed by an always-run cleanup step. There is no automatic public release on tag push.
 
 FINAL CHECK BEFORE PUBLISHING
 

@@ -12,7 +12,7 @@ LOCAL RELEASE (no certificate/key export required)
    To inspect available Developer ID Application certificates:
    security find-identity -v -p codesigning
 
-   Set RELEASE_IDENTITY to its 40-character SHA-1 fingerprint (or its certificate name). A fingerprint avoids ambiguity when several certificates share a name.
+   RELEASE_IDENTITY is configured as 40B01B2D2C144B2F9D865C09C0570EFCC484E4BC, expiring 2027-02-01. Use that certificate when generating the approved distribution profiles. A fingerprint avoids ambiguity when several certificates share a name. Renew the signing certificate before building releases after that date.
 
 3. Store notarization credentials in the macOS Keychain. This command prompts interactively, so no password needs to go in a script or shell history:
    xcrun notarytool store-credentials driver-releases
@@ -45,7 +45,7 @@ A manual Release workflow is included and disabled by default. It expects these 
   ASC_ISSUER_ID
   ASC_KEY_P8_BASE64
 
-The p12 must contain the Developer ID Application certificate and private key used by both profiles. Store these in GitHub Actions secrets only if CI signing is wanted; local packaging needs no private-key upload. Base64 is encoding, not encryption. Local signing and notarization are configured and tested. Notarization API secrets are stored in both repositories. Uploading the Developer ID identity to Actions still requires approval of the macOS private-key export prompt. Distribution profiles remain pending Apple approval. Secrets are not stored in Git.
+The p12 must contain the Developer ID Application certificate and private key used by both profiles. Store these in GitHub Actions secrets only if CI signing is wanted; local packaging needs no private-key upload. Base64 is encoding, not encryption. Local signing and notarization are configured and tested. Both repositories have the encrypted Developer ID identity, export password and notarization API secrets in Actions secrets. Temporary certificate exports have been removed. Distribution profiles remain pending Apple approval. Secrets are not stored in Git.
 
 A credentials_only=true run validates the Developer ID certificate, private key, secure timestamp and notarization authentication without building or uploading an app, DMG or release. RELEASE_IDENTITY selects the exact certificate fingerprint. Keep RELEASE_SIGNING_ENABLED=false during this check.
 

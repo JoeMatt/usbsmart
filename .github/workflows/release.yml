@@ -1,7 +1,8 @@
 name: Release (Developer ID, notarized draft)
 
 # Remains disabled until Apple's distribution grants and both Developer ID profiles exist.
-# Required repository variable: RELEASE_SIGNING_ENABLED=true
+# Required variables: RELEASE_SIGNING_ENABLED=true and RELEASE_IDENTITY (certificate SHA-1).
+# credentials_only=true validates credentials while the distribution gate remains disabled.
 # Required secrets:
 # DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD
 # RELEASE_HOST_PROFILE_BASE64, RELEASE_DRIVER_PROFILE_BASE64
@@ -16,6 +17,11 @@ on:
         required: true
         type: string
         default: "0.3.0"
+      credentials_only:
+        description: Validate signing and notarization credentials without profiles or release artifacts
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -26,11 +32,12 @@ concurrency:
 
 jobs:
   release:
-    if: vars.RELEASE_SIGNING_ENABLED == 'true'
+    if: inputs.credentials_only || vars.RELEASE_SIGNING_ENABLED == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Validate version input
+        if: ${{ !inputs.credentials_only }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
@@ -55,6 +62,7 @@ jobs:
           HOST_PROFILE: ${{ secrets.RELEASE_HOST_PROFILE_BASE64 }}
           DRIVER_PROFILE: ${{ secrets.RELEASE_DRIVER_PROFILE_BASE64 }}
           ASC_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          CREDENTIALS_ONLY: ${{ inputs.credentials_only }}
         run: |
           set -euo pipefail
           umask 077
@@ -65,6 +73,8 @@ jobs:
           for var, name in [('P12','release-cert.p12'), ('HOST_PROFILE','host.provisionprofile'), ('DRIVER_PROFILE','driver.provisionprofile'), ('ASC_KEY','AuthKey.p8')]:
               value = os.environ.get(var)
               if not value:
+                  if var in ('HOST_PROFILE', 'DRIVER_PROFILE') and os.environ['CREDENTIALS_ONLY'] == 'true':
+                      continue
                   raise SystemExit(f'Missing release secret: {var}')
               (root/name).write_bytes(base64.b64decode(''.join(value.split()), validate=True))
           PY
@@ -85,21 +95,41 @@ jobs:
           xcrun notarytool store-credentials release-notary \
             --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" \
             --keychain "$RUNNER_TEMP/release-signing.keychain-db"
+      - name: Verify Developer ID signing with a temporary executable
+        env:
+          RELEASE_IDENTITY: ${{ vars.RELEASE_IDENTITY }}
+        run: |
+          set -euo pipefail
+          printf 'int main(void) { return 0; }\n' > "$RUNNER_TEMP/signing-probe.c"
+          xcrun clang -arch arm64 -mmacosx-version-min=14.0 "$RUNNER_TEMP/signing-probe.c" -o "$RUNNER_TEMP/signing-probe"
+          codesign --force --sign "$RELEASE_IDENTITY" --timestamp --options runtime "$RUNNER_TEMP/signing-probe"
+          python3 - <<'PYCODE'
+          import importlib.util, json, os
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('release', 'scripts/release.py')
+          release = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(release)
+          release.signature_check(Path(os.environ['RUNNER_TEMP'])/'signing-probe', json.loads(Path('packaging/release.json').read_text()))
+          print('Developer ID signature, team, secure timestamp and hardened runtime verified. No app or driver was published.')
+          PYCODE
       - name: Validate Apple distribution grants
+        if: ${{ !inputs.credentials_only }}
         env:
           RELEASE_HOST_PROFILE: ${{ runner.temp }}/host.provisionprofile
           RELEASE_DRIVER_PROFILE: ${{ runner.temp }}/driver.provisionprofile
         run: python3 scripts/release.py check-profiles
       - name: Build, sign, notarize and package
+        if: ${{ !inputs.credentials_only }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_HOST_PROFILE: ${{ runner.temp }}/host.provisionprofile
           RELEASE_DRIVER_PROFILE: ${{ runner.temp }}/driver.provisionprofile
-          RELEASE_IDENTITY: "Developer ID Application: Joseph Mattiello (S32Z3HMYVQ)"
+          RELEASE_IDENTITY: ${{ vars.RELEASE_IDENTITY }}
           RELEASE_NOTARY_PROFILE: release-notary
           RELEASE_KEYCHAIN: ${{ runner.temp }}/release-signing.keychain-db
         run: python3 scripts/release.py package --version "$RELEASE_VERSION"
       - name: Save verified release artifacts
+        if: ${{ !inputs.credentials_only }}
         uses: actions/upload-artifact@v4
         with:
           name: USBSmart-${{ inputs.version }}-arm64
@@ -110,6 +140,7 @@ jobs:
             build/release/*-notarization.json
           if-no-files-found: error
       - name: Create draft release
+        if: ${{ !inputs.credentials_only }}
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}

@@ -1,0 +1,59 @@
+Developer ID release preparation
+
+The scripts are ready; Apple distribution approval is still pending. Unsigned preview images are packaging checks only and must not be distributed as working installers.
+
+LOCAL RELEASE (no certificate/key export required)
+
+1. After Apple approves, enable the distribution capabilities on the existing app IDs. Create Developer ID provisioning profiles for the host app and its driver using the same Developer ID Application certificate. Download both profiles outside this repository. Development profiles will be rejected.
+
+2. Select a Developer ID Application certificate already in the local keychain:
+   security find-identity -v -p codesigning
+
+   Set RELEASE_IDENTITY to its 40-character SHA-1 fingerprint (or its certificate name). A fingerprint avoids ambiguity when several certificates share a name.
+
+3. Store notarization credentials in the macOS Keychain. This command prompts interactively, so no password needs to go in a script or shell history:
+   xcrun notarytool store-credentials driver-releases
+
+   Set RELEASE_NOTARY_PROFILE=driver-releases. An App Store Connect API key can also be stored with notarytool's --key/--key-id/--issuer options. Do not commit a private key.
+
+4. Set RELEASE_HOST_PROFILE and RELEASE_DRIVER_PROFILE to the downloaded profile paths. Run:
+   python3 scripts/release.py check-profiles
+
+   The gate requires the correct team and exact app identifiers, an unexpired all-devices profile, and the required entitlement grants. It rejects development profiles and debugging entitlements. For Drobo, it requires the 8D PCI grant, accepts an optional second device grant, and removes unapproved optional hardware matches from the release bundle.
+
+5. Build the distribution files:
+   python3 scripts/release.py package
+
+   Or require the version intended for release:
+   python3 scripts/release.py package --version VERSION
+
+   Replace VERSION with the numeric version in project.yml. The script uses a fresh build/release directory. For a second attempt, choose a fresh directory with --output; it will not overwrite signed artifacts.
+
+   This builds arm64, signs the CLI/driver/app from inside out with secure timestamps and hardened runtime, checks certificate/profile agreement and signed entitlements, notarizes and staples the app, builds the DMG, signs/notarizes/staples the DMG, checks Gatekeeper, and writes a ZIP plus SHA256SUMS.txt. Notarization receipts remain in the output directory. The package command does not publish anything.
+
+GITHUB ACTIONS (optional)
+
+A manual Release workflow is included and disabled by default. It expects these repository secrets:
+  DEVELOPER_ID_P12_BASE64
+  DEVELOPER_ID_P12_PASSWORD
+  RELEASE_HOST_PROFILE_BASE64
+  RELEASE_DRIVER_PROFILE_BASE64
+  ASC_KEY_ID
+  ASC_ISSUER_ID
+  ASC_KEY_P8_BASE64
+
+The p12 must contain the Developer ID Application certificate and private key used by both profiles. Store these in GitHub Actions secrets only if CI signing is wanted; local packaging needs no private-key upload. Base64 is encoding, not encryption. No credentials or profiles have been uploaded by this preparation.
+
+After approval and secret setup, set repository variable RELEASE_SIGNING_ENABLED=true. Run the manual Release workflow with the exact version from project.yml. It creates verified DMG/ZIP/checksum artifacts and a DRAFT GitHub release, tied to the workflow commit. Signing credentials live in a temporary keychain and are removed by an always-run cleanup step. There is no automatic public release on tag push.
+
+FINAL CHECK BEFORE PUBLISHING
+
+Install the signed download on an Apple silicon Mac that is not registered for development. Leave SIP enabled and Full Security selected. Confirm Gatekeeper accepts it, activate and approve the driver, then reconnect the supported hardware. Test the report or mounted volumes as appropriate. This clean-Mac driver activation check has not been performed while approval is pending.
+
+Only after that check, publish the draft release and point the site's download link at its DMG. Upload only the versioned DMG, versioned ZIP and SHA256SUMS.txt. Never upload DerivedData, staging, provisioning profiles, certificates or keys.
+
+PACKAGING PREVIEW
+
+  python3 scripts/release.py preview --output build/release-preview
+
+This makes an explicitly labelled UNSIGNED-PREVIEW.dmg, with the app, Applications link, license and an unsigned-preview notice. The preview cannot load a driver under normal security. It is not uploaded or published by the workflow.

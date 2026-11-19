@@ -1,0 +1,9 @@
+USBSmart
+
+A macOS app for reading SATA drive health through supported USB docks. Includes a drive sidebar, health summary, SMART attributes and a bundled command-line tool.
+
+Install: drag the app into Applications, open Driver setup, activate and approve the driver. Safely eject mounted volumes before reconnecting the dock.
+
+Apple silicon, macOS 14 or later. Verified on M2 Max, macOS 27.2.1, with a VIA Labs VL715. Eleven other bridge IDs are untested candidates. UAS and NVMe bridges are not verified. SMART reads do not write to the drive; macOS still controls ordinary filesystem access.
+
+The downloadable files must be Developer ID signed, notarized and stapled. Verify SHA256SUMS.txt before installation.

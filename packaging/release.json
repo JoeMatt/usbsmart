@@ -1,0 +1,13 @@
+{
+  "product": "USBSmart",
+  "project": "USBSmart.xcodeproj",
+  "scheme": "USBSmartHost",
+  "app_id": "com.joemattiello.USBSmart",
+  "driver_id": "com.joemattiello.USBSmart.driver",
+  "cli": "usbsmart",
+  "driver_entitlements": "Driver/USBSmartDriver.entitlements",
+  "host_entitlements": "Host/USBSmartHost.entitlements",
+  "team": "S32Z3HMYVQ",
+  "pci_matches": [],
+  "install_text": "USBSmart\n\nDrag USBSmart.app into Applications, then open it. Open Driver setup, click Activate driver and approve USBSmart in System Settings under Driver Extensions. Safely eject mounted volumes before reconnecting the dock. Select a drive in the sidebar to read its report.\n\nApple silicon, macOS 14 or later. Only the VIA Labs VL715 has been verified on hardware. Other listed bridges are untested candidates. SATA drives only; UAS and NVMe operation are not verified.\n\nThe SMART interface is read-only. macOS may still mount connected volumes read-write as usual.\nhttps://github.com/JoeMatt/usbsmart\n"
+}

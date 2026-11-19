@@ -7,3 +7,11 @@ DerivedData/
 
 # Pages saved from real drives carry serial numbers.
 captures/
+
+# Local distribution credentials and profile exports stay off Git.
+*.p12
+*.p8
+*.provisionprofile
+*.mobileprovision
+*.local.env
+__pycache__/

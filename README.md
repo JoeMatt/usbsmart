@@ -94,6 +94,19 @@ the drives this was written for may hold the only copy of someone's data.
 One thing the driver does not change: macOS itself still mounts any volume it recognises on the
 disk, read-write, exactly as it does without this driver.
 
+## Downloadable releases
+
+A Developer ID distribution request has been submitted to Apple; approval is pending.
+Release packaging is prepared in `scripts/release.py`. It validates the Apple profiles,
+signs the app and embedded driver, notarizes and staples the app and DMG, then writes a ZIP
+and SHA-256 checksums. The manual release workflow creates a draft release and stays disabled
+until distribution signing is configured.
+
+The [release instructions](packaging/release-instructions.txt) cover local signing and optional
+CI secrets. No signing keys have been uploaded. Unsigned preview DMGs are packaging checks,
+and cannot activate their driver under normal macOS security. A clean-Mac driver installation
+still needs testing after Apple grants distribution.
+
 ## Install
 
 You need a paid Apple Developer account, Xcode with the DriverKit SDK, and

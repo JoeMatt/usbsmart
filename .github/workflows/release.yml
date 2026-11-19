@@ -1,0 +1,125 @@
+name: Release (Developer ID, notarized draft)
+
+# Remains disabled until Apple's distribution grants and both Developer ID profiles exist.
+# Required repository variable: RELEASE_SIGNING_ENABLED=true
+# Required secrets:
+# DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD
+# RELEASE_HOST_PROFILE_BASE64, RELEASE_DRIVER_PROFILE_BASE64
+# ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64
+# The certificate must be present in both profiles. No development profiles are accepted.
+# The workflow creates a DRAFT release. Publish only after clean-Mac installation testing.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact project version (without v)
+        required: true
+        type: string
+        default: "0.3.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: distribution-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: vars.RELEASE_SIGNING_ENABLED == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version input
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess
+          version = os.environ['RELEASE_VERSION']
+          assert re.fullmatch(r'\d+\.\d+\.\d+', version), 'Expected x.y.z'
+          tag = 'refs/tags/v' + version
+          lines = subprocess.check_output(['git', 'ls-remote', '--tags', 'origin', tag, tag + '^{}'], text=True).splitlines()
+          refs = dict(line.split()[::-1] for line in lines)
+          target = refs.get(tag + '^{}', refs.get(tag))
+          assert target is None or target == os.environ['GITHUB_SHA'], 'Existing version tag points to a different commit'
+          PY
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Check release validation
+        run: python3 -m unittest discover -s tests -p 'test_release.py'
+      - name: Prepare signing keychain and distribution profiles
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          HOST_PROFILE: ${{ secrets.RELEASE_HOST_PROFILE_BASE64 }}
+          DRIVER_PROFILE: ${{ secrets.RELEASE_DRIVER_PROFILE_BASE64 }}
+          ASC_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          for var, name in [('P12','release-cert.p12'), ('HOST_PROFILE','host.provisionprofile'), ('DRIVER_PROFILE','driver.provisionprofile'), ('ASC_KEY','AuthKey.p8')]:
+              value = os.environ.get(var)
+              if not value:
+                  raise SystemExit(f'Missing release secret: {var}')
+              (root/name).write_bytes(base64.b64decode(''.join(value.split()), validate=True))
+          PY
+          SIGNING_KEYCHAIN="$RUNNER_TEMP/release-signing.keychain-db"
+          SIGNING_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$SIGNING_PASSWORD" "$SIGNING_KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$SIGNING_KEYCHAIN"
+          security unlock-keychain -p "$SIGNING_PASSWORD" "$SIGNING_KEYCHAIN"
+          security import "$RUNNER_TEMP/release-cert.p12" -P "$P12_PASSWORD" -t cert -f pkcs12 -k "$SIGNING_KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$SIGNING_PASSWORD" "$SIGNING_KEYCHAIN"
+          security list-keychains -d user -s "$SIGNING_KEYCHAIN"
+          rm "$RUNNER_TEMP/release-cert.p12"
+      - name: Store temporary notarization credentials
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcrun notarytool store-credentials release-notary \
+            --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" \
+            --keychain "$RUNNER_TEMP/release-signing.keychain-db"
+      - name: Validate Apple distribution grants
+        env:
+          RELEASE_HOST_PROFILE: ${{ runner.temp }}/host.provisionprofile
+          RELEASE_DRIVER_PROFILE: ${{ runner.temp }}/driver.provisionprofile
+        run: python3 scripts/release.py check-profiles
+      - name: Build, sign, notarize and package
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_HOST_PROFILE: ${{ runner.temp }}/host.provisionprofile
+          RELEASE_DRIVER_PROFILE: ${{ runner.temp }}/driver.provisionprofile
+          RELEASE_IDENTITY: "Developer ID Application: Joseph Mattiello (S32Z3HMYVQ)"
+          RELEASE_NOTARY_PROFILE: release-notary
+          RELEASE_KEYCHAIN: ${{ runner.temp }}/release-signing.keychain-db
+        run: python3 scripts/release.py package --version "$RELEASE_VERSION"
+      - name: Save verified release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: USBSmart-${{ inputs.version }}-arm64
+          path: |
+            build/release/USBSmart-*.dmg
+            build/release/USBSmart-*.zip
+            build/release/SHA256SUMS.txt
+            build/release/*-notarization.json
+          if-no-files-found: error
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v$RELEASE_VERSION" \
+            build/release/USBSmart-*.dmg build/release/USBSmart-*.zip build/release/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --draft --title "USBSmart $RELEASE_VERSION" --notes-file packaging/notes.txt
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/release-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/release-cert.p12" "$RUNNER_TEMP/AuthKey.p8" \
+            "$RUNNER_TEMP/host.provisionprofile" "$RUNNER_TEMP/driver.provisionprofile"

@@ -23,6 +23,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Bridge matches are in sync
+        run: python3 scripts/generate-bridges.py --check
+
       - name: Generate project
         run: xcodegen generate
 

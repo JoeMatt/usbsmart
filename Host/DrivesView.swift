@@ -47,7 +47,7 @@ struct DrivesView: View {
                     Label(model.isReading ? "Reading drives…" : "No supported drive connected",
                           systemImage: "externaldrive.badge.questionmark")
                 } description: {
-                    Text("Connect a SATA drive in a supported USB dock. The VIA Labs VL715, used in Sabrent docks, is currently supported.")
+                    Text("Connect a SATA drive in a listed USB dock. Open Driver setup to see the bridge compatibility list.")
                     Text("For the first use, activate the driver and approve it in System Settings, then reconnect the dock.")
                 } actions: {
                     Button("Set up driver") { showDriver = true }
@@ -80,6 +80,24 @@ struct DrivesView: View {
             Text(extensionModel.status).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             Text("The app can read a drive's identity and SMART pages. It cannot start self-tests, change drive settings or erase a drive.")
                 .font(.caption).foregroundStyle(.secondary)
+            Divider()
+            Text("Bridge compatibility").font(.headline)
+            Text("Listed bridges use standard SAT commands. Only the VIA Labs VL715 has been verified with this driver; other matches are candidates for testing. UAS operation is unverified.")
+                .font(.caption).foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(bridgeCatalog) { bridge in
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(bridge.name).font(.callout)
+                                Text(bridge.status).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(bridge.id).font(.caption.monospaced())
+                        }
+                    }
+                }
+            }.frame(height: 190)
             HStack { Spacer(); Button("Done") { showDriver = false }.keyboardShortcut(.defaultAction) }
         }.padding(24).frame(width: 520)
     }

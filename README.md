@@ -48,7 +48,8 @@ Seagate ST8000DM004.
 | SMART READ LOG (error log, self-test log) | works |
 | SMART RETURN STATUS (the drive's own pass/fail verdict) | the command completes, but this bridge does not hand back the drive's registers, so the verdict is worked out from the thresholds instead (smartctl does the same) |
 | `--smartctl` hand-off | works with smartmontools 7.5 |
-| Other bridges, UAS bridges | not tried |
+| Additional SAT bridges | 11 candidate matches added; not tested with this macOS driver |
+| UAS bridges | not tried |
 
 ## How it works
 
@@ -140,7 +141,7 @@ ln -s /Applications/USBSmart.app/Contents/MacOS/usbsmart /opt/homebrew/bin/usbsm
 A development-signed driver runs only on Macs registered in your developer account, and the
 signing lasts a year. This is the current development-signing path. A public download needs
 Apple to grant the DriverKit distribution entitlements, followed by Developer ID signing and
-notarization; no public distribution grant has been verified for this app.
+notarization. A distribution request was submitted to Apple on 2026-11-18; approval is pending.
 
 To renew or update: rebuild, eject the dock's volumes, copy the app again,
 activate again. Bump both version numbers in `project.yml` for any driver change, or macOS
@@ -174,14 +175,33 @@ Saved pages contain the drive's serial number. `captures/` is git-ignored for th
 
 ## Adding another bridge
 
-Copy the `VIALabsVL715` personality in `Driver/Info.plist`, rename it, and put the bridge's USB
-vendor and product IDs (decimal) in its `IOPropertyMatch`. Find them with
-`ioreg -p IOUSB -l | grep -E 'idVendor|idProduct|USB Product Name'`. Bump the version, rebuild,
-activate again, replug.
+The driver has 12 exact USB bridge matches. `bridges.json` is the source of truth, and
+`scripts/generate-bridges.py` generates both the driver personalities in `Driver/Info.plist`
+and the compatibility list in the app. The driver code uses the same standard SAT commands
+for every match.
 
-The bridge must support SAT (ATA PASS-THROUGH); most do, and
-[smartmontools keeps a list](https://www.smartmontools.org/wiki/Supported_USB-Devices). Bridges
-that macOS drives over UAS instead of Bulk-Only Transport are untested here, and there is a
+| USB IDs | Bridge family | Status with USBSmart |
+| --- | --- | --- |
+| `2109:0715` | VIA Labs VL715 | Verified on hardware |
+| `174c:55aa`, `174c:1153`, `174c:235c` | ASMedia SATA | Untested candidates |
+| `152d:0567`, `152d:0577`, `152d:0578`, `152d:0579`, `152d:0580` | JMicron SATA | Untested candidates |
+| `1759:5000`, `1759:5002`, `1759:5100` | LucidPort SATA | Untested candidates |
+
+Candidate selection follows the SAT entries in the
+[smartmontools bridge database](https://github.com/smartmontools/smartmontools/blob/main/drivedb/drivedb.h).
+Its reports establish a reason to try standard SAT, not proof that Apple's `UserSendCDB`
+works on each bridge. UAS operation remains unverified. No vendor-wide or all-USB match is
+installed, and known NVMe-only products are excluded.
+
+To add a bridge, add its exact USB vendor/product pair to `bridges.json` with `verified: false`,
+then run `python3 scripts/generate-bridges.py`. Bump the driver version, rebuild and activate,
+then safely eject mounted volumes before reconnecting the dock. Mark a bridge verified only
+after testing real SMART pages with this driver. CI checks that the generated matches stay
+in sync with the catalog.
+
+Bridges that require proprietary commands or ATA PASS-THROUGH (12) are outside the current
+command set. A listed bridge may still reject SMART commands, in which case the app reports
+the failed read. There is a
 [developer forum report](https://developer.apple.com/forums/thread/802099) of `UserSendCDB` not
 moving data over UAS.
 

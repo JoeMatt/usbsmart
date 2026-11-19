@@ -1,0 +1,17 @@
+{
+  "source": "https://github.com/smartmontools/smartmontools/blob/main/drivedb/drivedb.h",
+  "bridges": [
+    {"key":"VIALabsVL715","vendor":"2109","product":"0715","name":"VIA Labs VL715","verified":true},
+    {"key":"ASMedia55AA","vendor":"174c","product":"55aa","name":"ASMedia SATA bridge","verified":false},
+    {"key":"ASMedia1153","vendor":"174c","product":"1153","name":"ASMedia SATA bridge","verified":false},
+    {"key":"ASMedia235C","vendor":"174c","product":"235c","name":"ASMedia SATA bridge","verified":false},
+    {"key":"JMicron0567","vendor":"152d","product":"0567","name":"JMicron JMS567","verified":false},
+    {"key":"JMicron0577","vendor":"152d","product":"0577","name":"JMicron SATA bridge","verified":false},
+    {"key":"JMicron0578","vendor":"152d","product":"0578","name":"JMicron SATA bridge","verified":false},
+    {"key":"JMicron0579","vendor":"152d","product":"0579","name":"JMicron SATA bridge","verified":false},
+    {"key":"JMicron0580","vendor":"152d","product":"0580","name":"JMicron SATA bridge","verified":false},
+    {"key":"LucidPort5000","vendor":"1759","product":"5000","name":"LucidPort USB300","verified":false},
+    {"key":"LucidPort5002","vendor":"1759","product":"5002","name":"LucidPort USB300","verified":false},
+    {"key":"LucidPort5100","vendor":"1759","product":"5100","name":"LucidPort SATA bridge","verified":false}
+  ]
+}

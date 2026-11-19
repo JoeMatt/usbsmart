@@ -338,8 +338,8 @@ SMART overall-health: <span class="p">PASSED</span>
         </div></div>
         <div class="shell reveal"><div class="core">
           <span class="state info"><i></i>Matching</span>
-          <h3>Limited to one dock</h3>
-          <p><code>IOParentMatch -> IOPropertyMatch</code> on <code>idVendor</code> 8457 and <code>idProduct</code> 1813 limits the match to disks with that USB device among their ancestors. Without it the driver would attach to every disk on the Mac.</p>
+          <h3>Exact bridge matches</h3>
+          <p><code>bridges.json</code> generates 12 exact USB vendor/product matches, each restricted through <code>IOParentMatch -> IOPropertyMatch</code>. The same SAT command code serves all of them. There is no wildcard match for every USB disk.</p>
         </div></div>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state ok"><i></i>Signing</span>
@@ -414,7 +414,7 @@ SMART overall-health: <span class="p">PASSED</span>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state warn"><i></i>Untested</span>
           <h3>Other docks</h3>
-          <p>Each dock has a chip inside that has to be listed by name. One is listed today: the VIA Labs VL715 found in Sabrent docks. Adding another takes a few lines and a rebuild.</p>
+          <p>Twelve bridge IDs are listed across VIA Labs, ASMedia, JMicron and LucidPort. The VL715 is verified; the other 11 are candidates based on the smartmontools SAT database. They still need testing with this macOS driver. Driver setup shows the compatibility list.</p>
         </div></div>
         <div class="shell reveal" style="--d:.16s"><div class="core">
           <span class="state no"><i></i>Not supported</span>
@@ -435,7 +435,7 @@ SMART overall-health: <span class="p">PASSED</span>
       <div class="sticky">
         <span class="eyebrow reveal">Get it</span>
         <h2 class="reveal" style="--d:.08s">A public download needs Apple’s approval.</h2>
-        <p class="lede reveal" style="--d:.16s">The app now displays the drive list and health report itself. Public distribution requires Apple’s DriverKit approval, then signing and notarization. Until that is granted, the build instructions below are for developers using their own Macs.</p>
+        <p class="lede reveal" style="--d:.16s">The app now displays the drive list and health report itself. The DriverKit distribution request has been submitted to Apple. Once approved, the app can be signed and notarized for download. Until then, the build instructions below are for developers using their own Macs.</p>
         <div class="actions reveal" style="--d:.24s; margin-top:2rem; display:flex">
           <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Step-by-step guide
             <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
@@ -445,7 +445,7 @@ SMART overall-health: <span class="p">PASSED</span>
         <span class="state info"><i></i>What you need</span>
         <ul class="list" style="margin-top:1rem">
           <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on an M2 Max with macOS 27.2.1 only.</span></div></li>
-          <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>Any SATA drive. The dock needs the VL715 chip for now.</span></div></li>
+          <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>A SATA drive in a listed USB bridge. The VL715 is verified; 11 other bridge IDs are listed as untested candidates.</span></div></li>
           <li><span class="n">03</span><div><strong>A paid Apple Developer Program membership</strong><span>US $99 a year. Apple does not allow drivers on free accounts.</span></div></li>
           <li><span class="n">04</span><div><strong>Xcode and Homebrew</strong><span>Both free. You change a few lines to your own developer ID, paste five commands into Terminal and flip one switch in System Settings.</span></div></li>
         </ul>

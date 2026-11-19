@@ -36,3 +36,6 @@ jobs:
 
       - name: Decoder check
         run: tests/decoder.sh "$PWD/build/Build/Products/Release/usbsmart"
+
+      - name: Health report checks
+        run: tests/report.sh

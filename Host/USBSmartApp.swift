@@ -2,8 +2,7 @@
 //  USBSmartApp.swift
 //
 //  The host app exists to install and remove the driver extension, which macOS only allows
-//  from an app in /Applications. Reading drives is done with the `usbsmart` command inside the
-//  app bundle (Contents/MacOS/usbsmart).
+//  from an app in /Applications. The app and the bundled `usbsmart` command share the drive reader and page decoders.
 //
 //  Launch arguments: `--activate` or `--deactivate` submit that request at launch, so the
 //  driver can be installed from a terminal; the approval in System Settings is still the
@@ -79,38 +78,12 @@ struct USBSmartApp: App {
 
     var body: some Scene {
         WindowGroup("USBSmart") {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("USBSmart driver").font(.title2).bold()
-                Text("Reads SMART health data from SATA drives in USB docks. Read-only: it never "
-                     + "writes to a drive, starts a self-test or changes a setting.")
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    Button("Activate") { model.activate() }
-                        .keyboardShortcut(.defaultAction)
-                    Button("Deactivate") { model.deactivate() }
+            DrivesView(extensionModel: model)
+                .onAppear {
+                    if CommandLine.arguments.contains("--activate") { model.activate() }
+                    else if CommandLine.arguments.contains("--deactivate") { model.deactivate() }
                 }
-                Text(model.status)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                Divider()
-                Text("Then, in Terminal:")
-                Text(verbatim: "/Applications/USBSmart.app/Contents/MacOS/usbsmart disk9")
-                    .font(.system(.callout, design: .monospaced))
-                    .textSelection(.enabled)
-            }
-            .padding(20)
-            .frame(width: 460)
-            .onAppear {
-                let arguments = CommandLine.arguments
-                if arguments.contains("--activate") {
-                    model.activate()
-                } else if arguments.contains("--deactivate") {
-                    model.deactivate()
-                }
-            }
         }
-        .windowResizability(.contentSize)
+        .defaultSize(width: 1120, height: 760)
     }
 }

@@ -126,14 +126,23 @@ You need a paid Apple Developer account, Xcode with the DriverKit SDK, and
    Mac's security.
 5. Unplug and replug the dock.
 
-The command is inside the app. To have it on your `PATH`:
+Open USBSmart to see supported drives in the sidebar. Select a drive for its identity, health
+summary and SMART attributes. Refresh reads the pages again, and the list updates when drives
+are connected or removed. Driver setup is available from the toolbar. No Terminal is needed
+to read a report.
+
+The command is also inside the app. To have it on your `PATH`:
 
 ```bash
 ln -s /Applications/USBSmart.app/Contents/MacOS/usbsmart /opt/homebrew/bin/usbsmart
 ```
 
 A development-signed driver runs only on Macs registered in your developer account, and the
-signing lasts a year. To renew or update: rebuild, eject the dock's volumes, copy the app again,
+signing lasts a year. This is the current development-signing path. A public download needs
+Apple to grant the DriverKit distribution entitlements, followed by Developer ID signing and
+notarization; no public distribution grant has been verified for this app.
+
+To renew or update: rebuild, eject the dock's volumes, copy the app again,
 activate again. Bump both version numbers in `project.yml` for any driver change, or macOS
 keeps the installed one.
 

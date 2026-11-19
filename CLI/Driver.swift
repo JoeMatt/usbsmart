@@ -89,9 +89,22 @@ enum DriverError: Error, CustomStringConvertible {
 }
 
 /// A disk the driver is attached to.
-struct SmartDisk {
+final class SmartDisk {
     let bsdName: String
     let service: io_service_t
+
+    init(bsdName: String, service: io_service_t) {
+        self.bsdName = bsdName
+        self.service = service
+    }
+
+    deinit { IOObjectRelease(service) }
+
+    var registryID: UInt64 {
+        var id: UInt64 = 0
+        IORegistryEntryGetRegistryEntryID(service, &id)
+        return id
+    }
 
     /// Walks up from the disk's IOMedia to the driver's service.
     static func find(_ name: String) throws -> SmartDisk {

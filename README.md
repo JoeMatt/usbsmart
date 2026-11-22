@@ -96,16 +96,18 @@ disk, read-write, exactly as it does without this driver.
 
 ## Downloadable releases
 
-A Developer ID distribution request has been submitted to Apple; approval is pending.
-Release packaging is prepared in `scripts/release.py`. It validates the Apple profiles,
-signs the app and embedded driver, notarizes and staples the app and DMG, then writes a ZIP
-and SHA-256 checksums. The manual release workflow creates a draft release and stays disabled
-until distribution signing is configured.
+Apple has granted distribution access. USBSmart 0.3.1 is Developer ID signed, notarized and
+stapled; both the app and DMG pass Gatekeeper. It is staged for installation testing before
+public release. No developer account or Xcode is needed to run the distribution build.
 
-The [release instructions](packaging/release-instructions.txt) cover local signing and optional
-CI secrets. Signing and notarization credentials are configured; distribution profiles are pending. Unsigned preview DMGs are packaging checks,
-and cannot activate their driver under normal macOS security. A clean-Mac driver installation
-still needs testing after Apple grants distribution.
+The signed GUI and bundled CLI are authorized to connect to this driver through
+`com.apple.developer.driverkit.userclient-access`. The distribution driver does not claim
+`allow-any-userclient-access`. The CLI carries its profile in a nested app-like bundle, with
+a signed launcher preserving the usual command path.
+
+The [release instructions](packaging/release-instructions.txt) describe the three verified
+profiles and the packaging workflow. Activation and SMART reads with this distribution build
+still need testing on hardware; notarization alone does not establish that they work.
 
 ## Install
 

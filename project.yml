@@ -9,8 +9,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     # Bump both for any driver change: macOS will not replace an installed extension that has
     # the same version.
-    MARKETING_VERSION: "0.3.0"
-    CURRENT_PROJECT_VERSION: "4"
+    MARKETING_VERSION: "0.3.1"
+    CURRENT_PROJECT_VERSION: "5"
 targets:
   USBSmartHost:
     type: application

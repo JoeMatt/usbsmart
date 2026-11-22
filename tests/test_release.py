@@ -104,6 +104,24 @@ class DistributionGateTests(unittest.TestCase):
         ent = {'com.apple.developer.driverkit.transport.pci': [{'IOPCIPrimaryMatch': '0x12345678'}]}
         with self.assertRaises(release.ReleaseError): release.pci_subset(ent, ['0x38444452'])
 
+    def test_signed_client_access_requires_exact_driver(self):
+        grant = 'com.apple.developer.driverkit.userclient-access'
+        self.profile['Entitlements'][grant] = ['com.joemattiello.USBSmart.driver']
+        release.profile_entitlements(self.profile, BUNDLE, TEAM, {grant: ['com.joemattiello.USBSmart.driver']})
+        with self.assertRaises(release.ReleaseError):
+            release.profile_entitlements(self.profile, BUNDLE, TEAM, {grant: ['com.other.driver']})
+
+    def test_distribution_keeps_access_on_signed_clients(self):
+        import json, plistlib
+        config = json.loads((root / 'packaging/release.json').read_text())
+        driver = plistlib.loads((root / config['driver_entitlements']).read_bytes())
+        host = plistlib.loads((root / config['host_entitlements']).read_bytes())
+        cli = plistlib.loads((root / config['cli_entitlements']).read_bytes())
+        self.assertNotIn('com.apple.developer.driverkit.allow-any-userclient-access', driver)
+        expected = [config['driver_id']]
+        self.assertEqual(host['com.apple.developer.driverkit.userclient-access'], expected)
+        self.assertEqual(cli['com.apple.developer.driverkit.userclient-access'], expected)
+
     def test_no_pci_for_usbsmart(self):
         self.assertEqual(release.pci_subset({}, []), [])
 

@@ -6,4 +6,4 @@ Install: drag the app into Applications, open Driver setup, activate and approve
 
 Apple silicon, macOS 14 or later. Verified on M2 Max, macOS 27.2.1, with a VIA Labs VL715. Eleven other bridge IDs are untested candidates. UAS and NVMe bridges are not verified. SMART reads do not write to the drive; macOS still controls ordinary filesystem access.
 
-The downloadable files must be Developer ID signed, notarized and stapled. Verify SHA256SUMS.txt before installation.
+Version 0.3.1 is Developer ID signed, notarized and stapled. The app and CLI use scoped client entitlements granted by Apple; only the signed clients claim access to this driver. Hardware activation and SMART reads with the distribution build are pending verification. Verify SHA256SUMS.txt before installation.

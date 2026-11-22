@@ -343,8 +343,8 @@ SMART overall-health: <span class="p">PASSED</span>
         </div></div>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state ok"><i></i>Signing</span>
-          <h3>No request to Apple</h3>
-          <p>Three entitlements: <code>driverkit</code>, <code>driverkit.family.scsicontroller</code> and <code>driverkit.allow-any-userclient-access</code>. Xcode's automatic signing adds all three to a development profile. No USB transport entitlement, because the driver never opens the USB interface.</p>
+          <h3>Signed clients</h3>
+          <p>Apple granted DriverKit and the SCSI controller family for distribution. The signed app and CLI use <code>driverkit.userclient-access</code> to connect; the public driver does not claim <code>allow-any-userclient-access</code>. No USB transport entitlement, because the driver never opens the USB interface.</p>
         </div></div>
         <div class="shell reveal" style="--d:.16s"><div class="core">
           <span class="state warn"><i></i>Found on the way</span>
@@ -434,10 +434,10 @@ SMART overall-health: <span class="p">PASSED</span>
     <div class="wrap split">
       <div class="sticky">
         <span class="eyebrow reveal">Get it</span>
-        <h2 class="reveal" style="--d:.08s">A public download needs Apple’s approval.</h2>
-        <p class="lede reveal" style="--d:.16s">The app now displays the drive list and health report itself. The DriverKit distribution request has been submitted to Apple. Once approved, the app can be signed and notarized for download. Until then, the build instructions below are for developers using their own Macs.</p>
+        <h2 class="reveal" style="--d:.08s">Signed and notarized. Final testing next.</h2>
+        <p class="lede reveal" style="--d:.16s">Apple has granted distribution access. USBSmart 0.3.1 is signed and notarized, with the public download waiting on the final driver activation check. You will not need Xcode or a developer account to use it. The source build guide remains available for developers.</p>
         <div class="actions reveal" style="--d:.24s; margin-top:2rem; display:flex">
-          <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Step-by-step guide
+          <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Source build guide
             <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
         </div>
       </div>
@@ -446,8 +446,8 @@ SMART overall-health: <span class="p">PASSED</span>
         <ul class="list" style="margin-top:1rem">
           <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on an M2 Max with macOS 27.2.1 only.</span></div></li>
           <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>A SATA drive in a listed USB bridge. The VL715 is verified; 11 other bridge IDs are listed as untested candidates.</span></div></li>
-          <li><span class="n">03</span><div><strong>A paid Apple Developer Program membership</strong><span>US $99 a year. Apple does not allow drivers on free accounts.</span></div></li>
-          <li><span class="n">04</span><div><strong>Xcode and Homebrew</strong><span>Both free. You change a few lines to your own developer ID, paste five commands into Terminal and flip one switch in System Settings.</span></div></li>
+          <li><span class="n">03</span><div><strong>The app in Applications</strong><span>Drag USBSmart into Applications and open it. Its driver is included.</span></div></li>
+          <li><span class="n">04</span><div><strong>One approval in System Settings</strong><span>Activate the driver in the app, then approve USBSmart under Driver Extensions. Your Mac’s security settings stay as they are.</span></div></li>
         </ul>
       </div></div>
     </div>

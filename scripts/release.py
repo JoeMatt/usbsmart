@@ -98,7 +98,15 @@ def load_profiles(config, args):
             if key in granted:
                 out[key] = granted[key]
         return out
-    return host_path, driver_path, host, driver, signing_entitlements(host_required, host_ent), signing_entitlements(driver_required, driver_ent), matches
+    cli = None
+    if config.get('cli_id'):
+        require(args.cli_profile, 'Supply --cli-profile for the signed command-line client')
+        cli_path = Path(args.cli_profile).expanduser()
+        cli_profile = plistlib.loads(run(['security', 'cms', '-D', '-i', cli_path], capture=True))
+        cli_required = read_plist(ROOT / config['cli_entitlements'])
+        cli_ent = profile_entitlements(cli_profile, config['cli_id'], config['team'], cli_required)
+        cli = (cli_path, cli_profile, signing_entitlements(cli_required, cli_ent))
+    return host_path, driver_path, host, driver, signing_entitlements(host_required, host_ent), signing_entitlements(driver_required, driver_ent), matches, cli
 
 def build(config, output):
     run(['xcodegen', 'generate'])
@@ -154,8 +162,26 @@ def check_certificate(path, profile, output, label):
     for cert in output.glob(label + '-certificate-*'):
         cert.unlink()
 
+def prepare_cli_bundle(app, config, version, cli_profile_path):
+    cli = app / 'Contents/MacOS' / config['cli']
+    helper = app / 'Contents/Helpers/USBSmartCLI.app'
+    binary = helper / 'Contents/MacOS' / config['cli']
+    binary.parent.mkdir(parents=True)
+    cli.rename(binary)
+    (helper / 'Contents/Info.plist').write_bytes(plistlib.dumps({
+        'CFBundleIdentifier': config['cli_id'], 'CFBundleExecutable': config['cli'],
+        'CFBundlePackageType': 'APPL', 'CFBundleName': 'USBSmart CLI',
+        'CFBundleShortVersionString': version,
+        'CFBundleVersion': read_plist(app / 'Contents/Info.plist')['CFBundleVersion'],
+        'LSMinimumSystemVersion': '14.0', 'LSBackgroundOnly': True,
+    }))
+    shutil.copyfile(cli_profile_path, helper / 'Contents/embedded.provisionprofile')
+    run(['xcrun', 'clang', '-arch', 'arm64', '-mmacosx-version-min=14.0', '-O2',
+         '-Wall', '-Wextra', '-Werror', ROOT / 'packaging/cli-launcher.c', '-o', cli])
+    return helper
+
 def package(config, args, output):
-    host_path, driver_path, host_profile, driver_profile, host_ent, driver_ent, matches = load_profiles(config, args)
+    host_path, driver_path, host_profile, driver_profile, host_ent, driver_ent, matches, cli_info = load_profiles(config, args)
     require(args.identity and (args.identity.startswith('Developer ID Application:') or re.fullmatch(r'[0-9A-Fa-f]{40}', args.identity)), 'Supply --identity with a Developer ID Application certificate name or SHA-1 fingerprint')
     require(args.notary_profile, 'Supply --notary-profile before building a distribution release')
     app, stage, version = build(config, output)
@@ -176,6 +202,19 @@ def package(config, args, output):
     shutil.copyfile(driver_path, driver / 'embedded.provisionprofile')
     for label, ent in [('host', host_ent), ('driver', driver_ent)]:
         (output / (label + '-entitlements.plist')).write_bytes(plistlib.dumps(ent))
+    # A signed app-like wrapper is required for the CLI's restricted entitlement/profile.
+    if cli_info:
+        cli_path, cli_profile, cli_ent = cli_info
+        helper = prepare_cli_bundle(app, config, version, cli_path)
+        ent_path = output / 'cli-entitlements.plist'
+        ent_path.write_bytes(plistlib.dumps(cli_ent))
+        run(['codesign', '--force', '--sign', args.identity, '--timestamp', '--options', 'runtime',
+             '--entitlements', ent_path, helper])
+        signature_check(helper, config, cli_ent)
+        check_certificate(helper, cli_profile, output, 'cli')
+        # Exercise both the installed entry point and its usual symlink use without hardware.
+        run(['codesign', '--force', '--sign', args.identity, '--timestamp', '--options', 'runtime', cli])
+        run([cli, '--version'])
     # No --deep signing: sign each executable from the inside out.
     for target, ent in [(cli, None), (driver, 'driver'), (app, 'host')]:
         command = ['codesign', '--force', '--sign', args.identity, '--timestamp', '--options', 'runtime']
@@ -214,13 +253,14 @@ def main():
     parser.add_argument('--output', default='build/release')
     parser.add_argument('--host-profile', default=os.environ.get('RELEASE_HOST_PROFILE'))
     parser.add_argument('--driver-profile', default=os.environ.get('RELEASE_DRIVER_PROFILE'))
+    parser.add_argument('--cli-profile', default=os.environ.get('RELEASE_CLI_PROFILE'))
     parser.add_argument('--identity', default=os.environ.get('RELEASE_IDENTITY'))
     parser.add_argument('--notary-profile', default=os.environ.get('RELEASE_NOTARY_PROFILE'))
     parser.add_argument('--version', help='Require this exact version (without v)')
     args = parser.parse_args()
     config = json.loads(CONFIG.read_text())
     if args.command == 'check-profiles':
-        *_, matches = load_profiles(config, args)
+        *_, matches, cli = load_profiles(config, args)
         print('Distribution profiles passed. Approved PCI matches:', matches or 'not applicable')
         return
     output = Path(args.output).expanduser().resolve()

@@ -141,6 +141,52 @@ no supported disks were attached. The CLI returns 4 if any drive reports failure
 read was incomplete or failed, and 0 otherwise. The JSON document is available in all
 three cases.
 
+### Prometheus and Grafana
+
+`usbsmart --metrics` reads connected supported drives and writes Prometheus text to stdout.
+It returns success when it emits metrics, even if a drive fails or a read is incomplete.
+Use `usbsmart_drive_health{state="failed"}` for failures and
+`usbsmart_drive_health{state="unknown"}` for inconclusive health. Each is 1 when active.
+`usbsmart_drive_read_status{state="error"}` tracks read errors separately.
+
+For a Mac that already runs [Node Exporter](https://github.com/prometheus/node_exporter#textfile-collector),
+set its `--collector.textfile.directory` to the directory below. Run this as the same
+user every few minutes. The temporary file and final export stay on the Mac's internal disk.
+
+```sh
+set -eu
+dir="$HOME/Library/Application Support/node_exporter/textfile"
+mkdir -p "$dir"
+temporary=$(mktemp "$dir/.usbsmart.XXXXXXXX")
+trap 'rm -f "$temporary"' EXIT
+/Applications/USBSmart.app/Contents/MacOS/usbsmart --metrics > "$temporary"
+mv -f "$temporary" "$dir/usbsmart.prom"
+```
+
+Have Prometheus scrape Node Exporter and use that Prometheus instance as Grafana's data
+source. Example panel queries:
+
+| Panel | PromQL |
+| --- | --- |
+| Temperature | `usbsmart_drive_temperature_celsius` |
+| Drive failure | `usbsmart_drive_health{state="failed"} == 1` |
+| Health unavailable | `usbsmart_drive_health{state="unknown"} == 1` |
+| Pending sector attribute | `usbsmart_attribute_raw_value{attribute_id="197"}` |
+| Minutes since the last scan | `(time() - usbsmart_scan_timestamp_seconds) / 60` |
+
+The `drive_id` label is the hashed ID from JSON. If a drive's ID is unavailable or
+ambiguous, the label starts with `bsd:` and may change after a reconnect. To use the
+drive model as the temperature panel's legend, set the legend to `{{model}}` and query:
+
+```promql
+usbsmart_drive_temperature_celsius
+  * on (job, instance, drive_id) group_left(model) usbsmart_drive_info
+```
+
+Raw attribute values are vendor-specific, and the power-on metric assumes attribute 9
+reports hours. A missing attribute produces no sample. Watch scan freshness so a
+stopped collector does not make an old report look current.
+
 ## Install
 
 You need a paid Apple Developer account, Xcode with the DriverKit SDK, and

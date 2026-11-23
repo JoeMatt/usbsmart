@@ -88,6 +88,13 @@ struct DriveReading: Identifiable {
     let readAt: Date
     var snapshot: DriveSnapshot? = nil
 
+    enum Status: String, CaseIterable { case ok, partial, error }
+
+    var status: Status {
+        guard let snapshot else { return .error }
+        return snapshot.issues.isEmpty ? .ok : .partial
+    }
+
     var name: String { report?.identity.model ?? id }
 }
 
@@ -127,7 +134,7 @@ struct DriveScan {
 
     var exitStatus: Int32 {
         if readings.contains(where: { $0.report?.verdict == .failed }) { return 4 }
-        return readings.contains(where: { $0.snapshot?.issues.isEmpty != true }) ? 1 : 0
+        return readings.contains(where: { $0.status != .ok }) ? 1 : 0
     }
 
     func json() throws -> Data {
@@ -145,7 +152,7 @@ struct DriveScan {
         }
         let drives = readings.map {
             Row(disk: $0.id, readAt: $0.readAt,
-                status: $0.snapshot.map { $0.issues.isEmpty ? "ok" : "partial" } ?? "error",
+                status: $0.status.rawValue,
                 report: $0.snapshot, error: $0.error)
         }
         let encoder = JSONEncoder()

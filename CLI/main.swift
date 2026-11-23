@@ -16,6 +16,7 @@ let usage = """
       usbsmart                         list the disks the driver is attached to
       usbsmart <disk>                  identity, health verdict and attribute table
       usbsmart --json                  read all connected supported drives into one JSON document
+      usbsmart --metrics               read the same drives and emit Prometheus text
       usbsmart <disk> --smartctl [smartctl options]
                                        let smartctl decode the same pages with its drive
                                        database (default options: -a)
@@ -35,7 +36,8 @@ let usage = """
     <disk> is a BSD name such as disk9 or /dev/disk9.
 
     exit status: 0 success, 1 error, 2 usage, 4 the drive reports failure (its own verdict,
-    or an attribute at or below its threshold).
+    or an attribute at or below its threshold). --metrics returns 0 when it emits metrics,
+    including when the scan reports a drive warning or error.
     """
 
 func fail(_ message: String, status: Int32 = 1) -> Never {
@@ -412,6 +414,7 @@ let wantRaw = takeFlag("--raw")
 let wantReplay = takeFlag("--replay")
 let wantDebug = takeFlag("--debug")
 let wantJSON = takeFlag("--json")
+let wantMetrics = takeFlag("--metrics")
 let selfTestName = takeValue("--selftest")
 let wantSelfTestStatus = takeFlag("--selftest-status")
 
@@ -420,13 +423,19 @@ if let unknown = arguments.first(where: { $0.hasPrefix("-") }) {
 }
 guard arguments.count <= 1 else { fail(usage, status: 2) }
 
-if wantJSON {
-    guard arguments.isEmpty, decodeDirectory == nil, saveDirectory == nil,
+if wantJSON || wantMetrics {
+    let option = wantJSON ? "--json" : "--metrics"
+    guard !(wantJSON && wantMetrics), arguments.isEmpty, decodeDirectory == nil, saveDirectory == nil,
           smartctlOptions == nil, !wantRaw, !wantReplay, !wantDebug,
           selfTestName == nil, !wantSelfTestStatus else {
-        fail("--json is a standalone scan of all connected supported drives.\n\n" + usage, status: 2)
+        fail("\(option) is a standalone scan of all connected supported drives.\n\n" + usage, status: 2)
     }
     let scan = DriveScan.readConnected()
+    if wantMetrics {
+        do { try FileHandle.standardOutput.write(contentsOf: Data(scan.prometheusMetrics().utf8)) }
+        catch { fail("Could not write metrics. \(error)") }
+        exit(0)
+    }
     do {
         FileHandle.standardOutput.write(try scan.json())
         print()

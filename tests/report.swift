@@ -120,8 +120,44 @@ struct ReportTests {
               "Do not export a threshold from a corrupt page")
         let duplicate = scan([("disk9", report(data, thresholds)), ("disk12", report(data, thresholds))], at: first)
         check(!history.record(duplicate.readings), "Do not merge two connected drives with the same identity")
+        var zeroThresholds = thresholds
+        for slot in 0..<30 { zeroThresholds[3 + 12 * slot] = 0 }
+        zeroThresholds[511] = 0
+        zeroThresholds[511] = 0 &- zeroThresholds.reduce(UInt8(0), &+)
+        let unknown = scan([("disk12", report(data, zeroThresholds))], at: second)
+        let metrics = unknown.prometheusMetrics()
+        let labels = "drive_id=\"\(id)\""
+        check(metrics.contains("usbsmart_drive_health{\(labels),state=\"unknown\"} 1\n") &&
+              metrics.contains("usbsmart_drive_health{\(labels),state=\"failed\"} 0\n"),
+              "Keep an unknown verdict separate from failure")
+        check(metrics.contains("usbsmart_drive_temperature_celsius{\(labels)} 35\n") &&
+              metrics.contains("usbsmart_drive_power_on_seconds{\(labels)} 155556000\n"),
+              "Decode temperature and convert hours to seconds")
+        check(!metrics.contains("TESTSERIAL0001") && !metrics.contains("5000cca212345678") &&
+              !metrics.contains("usbsmart_drive_temperature_celsius{\(labels),disk="),
+              "Stable samples omit changing BSD names and raw drive identifiers")
+        let mixedMetrics = current.prometheusMetrics()
+        check(mixedMetrics.contains("usbsmart_drive_health{\(labels),state=\"failed\"} 1\n") &&
+              mixedMetrics.contains("usbsmart_drive_read_status{drive_id=\"bsd:disk13\",state=\"error\"} 1\n"),
+              "Report failures and read errors independently")
+        check(!invalid.prometheusMetrics().contains("usbsmart_attribute_raw_value") &&
+              !noThresholds.prometheusMetrics().contains("usbsmart_attribute_threshold"),
+              "Omit metrics from corrupt SMART pages")
+        let duplicates = duplicate.prometheusMetrics()
+        check(duplicates.contains("drive_id=\"bsd:disk9\"") && duplicates.contains("drive_id=\"bsd:disk12\"") &&
+              !duplicates.contains(labels), "Use distinct fallback IDs when a drive identity is duplicated")
+        var quotedModel = identify
+        let modelBytes = Array(("Drive \"A\\B\"" + String(repeating: " ", count: 29)).utf8)
+        for offset in 0..<40 { quotedModel[54 + offset] = modelBytes[offset ^ 1] }
+        let quoted = DriveReport(identify: quotedModel, data: data, thresholds: thresholds, health: .passed)
+        let quotedMetrics = scan([("disk9", quoted)], at: first).prometheusMetrics()
+        check(quotedMetrics.contains("model=\"Drive \\\"A\\\\B\\\"\""), "Escape labels for Prometheus")
+        let emptyMetrics = scan([], at: first).prometheusMetrics()
+        check(emptyMetrics.contains("usbsmart_connected_drives 0\n") &&
+              emptyMetrics.contains("usbsmart_scan_timestamp_seconds 1000\n") &&
+              !emptyMetrics.contains("usbsmart_drive_health"), "An empty scan still reports count and freshness")
         for _ in 0..<ScanHistory.scansPerDrive { history.record(initial.readings) }
         check(history.drives[id]?.count == ScanHistory.scansPerDrive, "Cap retained history for each drive")
-        print("Report, scan history, and JSON export checks passed")
+        print("Report, scan history, JSON export, and Prometheus checks passed")
     }
 }

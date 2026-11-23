@@ -7,8 +7,8 @@ settings:
   base:
     DEVELOPMENT_TEAM: S32Z3HMYVQ
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "0.4.1"
-    CURRENT_PROJECT_VERSION: "8"
+    MARKETING_VERSION: "0.5.0"
+    CURRENT_PROJECT_VERSION: "9"
 targets:
   USBSmartHost:
     type: application
@@ -51,6 +51,7 @@ targets:
       - CLI
       - Shared/DriveReport.swift
       - Shared/DriveScan.swift
+      - Shared/SelfTest.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.cli
@@ -64,9 +65,9 @@ targets:
       - Driver
     settings:
       base:
-        # This patch only changes the app and CLI. Bump both here when the driver changes.
-        MARKETING_VERSION: "0.4.0"
-        CURRENT_PROJECT_VERSION: "7"
+        # Bump both here when the driver changes. 0.5.0 added the self-test command.
+        MARKETING_VERSION: "0.5.0"
+        CURRENT_PROJECT_VERSION: "8"
         SDKROOT: driverkit
         DRIVERKIT_DEPLOYMENT_TARGET: "23.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.driver

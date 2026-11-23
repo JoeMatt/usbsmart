@@ -38,6 +38,39 @@ struct ReportTests {
         check(report(failing, thresholds, .passed).verdict == .failed, "An attribute failure must not be hidden by a passing drive status")
         check(report(data, thresholds).concerns.contains(where: { $0.contains("24") }), "Remapped sectors should be called out")
         check(report(data, thresholds).metric(194)?.hasPrefix("35") == true, "Temperature must come from raw data")
+        // Self-tests: status byte, capability bits, times, and the log read newest first.
+        var testing = data
+        testing[363] = 0xF6            // in progress, 60% remaining
+        testing[367] = 0x31            // self-test and conveyance supported
+        testing[372] = 2               // short: 2 minutes
+        testing[373] = 0xFF            // long: in the 16-bit field
+        testing[375] = 0x2C; testing[376] = 0x01   // 300 minutes
+        var testLog = [UInt8](repeating: 0, count: 512)
+        func entry(_ slot: Int, type: UInt8, status: UInt8, hours: UInt16, lba: UInt32) {
+            let o = 2 + slot * 24
+            testLog[o] = type; testLog[o + 1] = status
+            testLog[o + 2] = UInt8(hours & 0xFF); testLog[o + 3] = UInt8(hours >> 8)
+            for i in 0..<4 { testLog[o + 5 + i] = UInt8((lba >> (8 * UInt32(i))) & 0xFF) }
+        }
+        entry(0, type: 1, status: 0x00, hours: 100, lba: 0)             // oldest: short, passed
+        entry(1, type: 2, status: 0x79, hours: 200, lba: 123_456)       // newest: long, read failure
+        testLog[508] = 2
+        var errorLog = [UInt8](repeating: 0, count: 512)
+        errorLog[452] = 7
+        let tested = DriveReport(identify: identify, data: testing, thresholds: thresholds, health: .passed,
+                                 selfTestLog: testLog, errorLog: errorLog).selfTest!
+        check(tested.supported && tested.conveyanceSupported, "Capability bits should be decoded")
+        check(tested.running && tested.percentRemaining == 60, "A running test should report what remains")
+        check(tested.shortMinutes == 2 && tested.longMinutes == 300, "Long test time comes from the 16-bit field")
+        check(tested.log.count == 2 && tested.log[0].type == "long" && tested.log[1].type == "short", "Log must be newest first")
+        check(!tested.log[0].passed && tested.log[0].firstFailingLBA == 123_456 && tested.log[0].lifetimeHours == 200, "A read failure keeps its LBA")
+        check(tested.log[1].passed && tested.log[1].firstFailingLBA == nil, "A pass has no failing LBA")
+        check(tested.ataErrorCount == 7, "Error count comes from the summary error log")
+        let untested = report(data, thresholds).selfTest!
+        check(!untested.running && untested.log.isEmpty && untested.ataErrorCount == nil && untested.status == "no test has been run", "No logs means no history")
+        check(SelfTestKind(name: "extended") == .long && SelfTestKind(name: "captive") == nil, "Only background tests have names")
+        check(!SelfTestKind.allCases.contains { $0.rawValue & 0x80 != 0 }, "Captive self-tests must never be offered")
+
         // Return status unavailable, but SMART disabled: there should be an explanation.
         var disabled = identify
         disabled[170] &= 0xfe

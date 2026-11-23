@@ -6,9 +6,11 @@ struct DriveReport {
     let table: SmartTable?
     let health: Health
     let warnings: [String]
+    /// Self-test state and history. Nil when the drive returned no SMART data page.
+    let selfTest: SelfTestInfo?
 
     init(identify: [UInt8], data: [UInt8]?, thresholds: [UInt8]?, health: Health,
-         warnings: [String] = []) {
+         warnings: [String] = [], selfTestLog: [UInt8]? = nil, errorLog: [UInt8]? = nil) {
         precondition(identify.count == 512)
         precondition(data == nil || data?.count == 512)
         precondition(thresholds == nil || thresholds?.count == 512)
@@ -16,6 +18,7 @@ struct DriveReport {
         table = data.map { SmartTable(data: $0, thresholds: thresholds) }
         self.health = health
         self.warnings = warnings
+        selfTest = data.map { SelfTestInfo(data: $0, selfTestLog: selfTestLog, errorLog: errorLog) }
     }
 
     static func read(_ disk: SmartDisk) throws -> DriveReport {
@@ -44,8 +47,14 @@ struct DriveReport {
         let health: Health
         do { health = Health(try disk.run(.returnStatus)) }
         catch { health = .unknown(String(describing: error)) }
+        // Optional extras: a bridge or drive that refuses a log is not worth a warning.
+        func log(_ address: UInt32) -> [UInt8]? {
+            guard data != nil, let reply = try? disk.run(.readLog, argument: address),
+                  reply.succeeded, reply.realizedBytes == 512 else { return nil }
+            return reply.data
+        }
         return DriveReport(identify: identify.data, data: data, thresholds: thresholds,
-                           health: health, warnings: warnings)
+                           health: health, warnings: warnings, selfTestLog: log(0x06), errorLog: log(0x01))
     }
 
     enum Verdict: String { case passed = "Passed", failed = "Failed", unknown = "Unknown" }

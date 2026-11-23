@@ -11,10 +11,11 @@
 
 #include <stdint.h>
 
-// The complete list of things the driver can be asked to do. Every one is an ATA command that
-// reads from the drive. There is no command here that writes, starts a self-test, changes a
-// setting or touches firmware, and the driver refuses to send anything else (see
-// USBSmartDevice::IsAllowedCDB).
+// The complete list of things the driver can be asked to do. Five read from the drive. The
+// sixth asks the drive to run (or stop) one of its own built-in self-tests in the background,
+// which reads the drive's surface and never writes user data. There is no command here that
+// writes, changes a setting or touches firmware, and the driver refuses to send anything else
+// (see USBSmartDevice::IsAllowedCDB).
 enum USBSmartCommand : uint32_t
 {
     kUSBSmartIdentify       = 0,    // IDENTIFY DEVICE (ECh)
@@ -22,13 +23,26 @@ enum USBSmartCommand : uint32_t
     kUSBSmartReadThresholds = 2,    // SMART READ THRESHOLDS (B0h / D1h)
     kUSBSmartReturnStatus   = 3,    // SMART RETURN STATUS (B0h / DAh), no data
     kUSBSmartReadLog        = 4,    // SMART READ LOG (B0h / D5h), argument = log address, 1 sector
+    kUSBSmartSelfTest       = 5,    // SMART EXECUTE OFF-LINE IMMEDIATE (B0h / D4h), no data,
+                                    // argument = USBSmartSelfTest
+};
+
+// The only subcommands kUSBSmartSelfTest accepts: the off-line (background) tests and abort.
+// The captive forms (81h-84h) hold the drive busy and are refused.
+enum USBSmartSelfTest : uint32_t
+{
+    kUSBSmartSelfTestShort      = 0x01,
+    kUSBSmartSelfTestExtended   = 0x02,
+    kUSBSmartSelfTestConveyance = 0x03,
+    kUSBSmartSelfTestAbort      = 0x7F,
 };
 
 // Selector 0 input.
 struct USBSmartRequest
 {
     uint32_t command;       // USBSmartCommand
-    uint32_t argument;      // log address for kUSBSmartReadLog, otherwise 0
+    uint32_t argument;      // log address for kUSBSmartReadLog, USBSmartSelfTest for
+                            // kUSBSmartSelfTest, otherwise 0
 };
 
 #define kUSBSmartReplyVersion   1

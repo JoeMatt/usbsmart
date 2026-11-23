@@ -16,7 +16,7 @@ on:
         description: Exact project version (without v)
         required: true
         type: string
-        default: "0.4.1"
+        default: "0.5.0"
       credentials_only:
         description: Validate signing and notarization credentials without profiles or release artifacts
         required: true

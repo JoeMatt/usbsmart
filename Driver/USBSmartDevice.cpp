@@ -9,12 +9,14 @@
 //      SMART READ THRESHOLDS    B0h / D1h          512 bytes in
 //      SMART READ LOG           B0h / D5h          512 bytes in (one sector of one log)
 //      SMART RETURN STATUS      B0h / DAh          none
+//      SMART EXECUTE OFF-LINE   B0h / D4h          none (start or abort a background self-test)
 //
 //  Each is wrapped in SCSI ATA PASS-THROUGH (16), opcode 85h, built by Apple's helpers in
 //  SCSIPeripheralsDriverKit. IsAllowedCDB then checks the finished command byte by byte and
-//  nothing is sent unless it passes. Do not add a command that writes to the drive, starts a
-//  self-test, changes a setting or touches firmware: drives read with this tool may hold the
-//  only copy of someone's data.
+//  nothing is sent unless it passes. Do not add a command that writes to the drive, changes a
+//  setting or touches firmware: drives read with this tool may hold the only copy of someone's
+//  data. The self-test command is limited to the background short, extended and conveyance
+//  tests and abort; they read the surface and write no user data. Captive tests are refused.
 //
 //  Normal disk I/O does not pass through this file. The kernel half of the class
 //  (IOUserSCSIPeripheralDeviceType00) is Apple's ordinary disk driver and handles it alone.
@@ -55,6 +57,7 @@ enum
     kATASmart               = 0xB0,
     kSmartReadData          = 0xD0,
     kSmartReadThresholds    = 0xD1,
+    kSmartExecuteOffline    = 0xD4,
     kSmartReadLog           = 0xD5,
     kSmartReturnStatus      = 0xDA,
     kSmartLBAMid            = 0x4F,
@@ -128,6 +131,13 @@ IMPL(USBSmartDevice, NewUserClient)
 // `argument` are what was asked for. Returns true only for the five read-only commands in the
 // table at the top of this file.
 static bool
+IsAllowedSelfTest(uint32_t argument)
+{
+    return argument == kUSBSmartSelfTestShort || argument == kUSBSmartSelfTestExtended ||
+           argument == kUSBSmartSelfTestConveyance || argument == kUSBSmartSelfTestAbort;
+}
+
+static bool
 IsAllowedCDB(const uint8_t * cdb, uint32_t command, uint32_t argument)
 {
     if (cdb[kCDBOpcode] != kATAPassThrough16) {
@@ -140,6 +150,13 @@ IsAllowedCDB(const uint8_t * cdb, uint32_t command, uint32_t argument)
 
     if (command == kUSBSmartReturnStatus) {
         return protocol == kProtocolNonData && ata == kATASmart && feature == kSmartReturnStatus &&
+               cdb[kCDBLBAMid] == kSmartLBAMid && cdb[kCDBLBAHigh] == kSmartLBAHigh;
+    }
+
+    if (command == kUSBSmartSelfTest) {
+        return IsAllowedSelfTest(argument) && protocol == kProtocolNonData && ata == kATASmart &&
+               feature == kSmartExecuteOffline && cdb[kCDBLBALow] == (uint8_t) argument &&
+               cdb[kCDBLBALow - 1] == 0 && cdb[kCDBFeatures - 1] == 0 &&
                cdb[kCDBLBAMid] == kSmartLBAMid && cdb[kCDBLBAHigh] == kSmartLBAHigh;
     }
 
@@ -170,6 +187,9 @@ USBSmartDevice::RunCommand(uint32_t command, uint32_t argument, USBSmartReply * 
     memset(reply, 0, sizeof(*reply));
     reply->version = kUSBSmartReplyVersion;
     if (command == kUSBSmartReadLog && argument > 0xFF) {
+        return kIOReturnBadArgument;
+    }
+    if (command == kUSBSmartSelfTest && !IsAllowedSelfTest(argument)) {
         return kIOReturnBadArgument;
     }
 
@@ -203,6 +223,15 @@ USBSmartDevice::RunCommand(uint32_t command, uint32_t argument, USBSmartReply * 
         case kUSBSmartReadLog:
             built = SMART_Read_Log_At_Address(&request, dataAddress, 1, (UInt8) argument, &response, senseAddress);
             break;
+        case kUSBSmartSelfTest:
+            // Same non-data wire form as SMART RETURN STATUS, which every supported bridge is
+            // known to pass: only the feature and the subcommand in LBA low differ.
+            built = SMART_Return_Status(&request, &response, senseAddress);
+            if (built) {
+                request.fCommandDescriptorBlock[kCDBFeatures] = kSmartExecuteOffline;
+                request.fCommandDescriptorBlock[kCDBLBALow] = (uint8_t) argument;
+            }
+            break;
         default:
             break;
     }
@@ -211,7 +240,7 @@ USBSmartDevice::RunCommand(uint32_t command, uint32_t argument, USBSmartReply * 
     if (!built) {
         result = kIOReturnUnsupported;
     } else {
-        if (command != kUSBSmartReturnStatus) {
+        if (command != kUSBSmartReturnStatus && command != kUSBSmartSelfTest) {
             // Every data command here reads one 512-byte sector. Apple's IDENTIFY helper leaves
             // the ATA sector count at 0 (seen on DriverKit 27.0: 85 08 0e 00 00 00 00 ... ec 00),
             // which with t_length = "count field" asks the bridge for no data at all. Send the

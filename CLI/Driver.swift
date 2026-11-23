@@ -107,7 +107,7 @@ final class SmartDisk {
     }
 
     /// Walks up from the disk's IOMedia to the driver's service.
-    static func find(_ name: String) throws -> SmartDisk {
+    static func find(_ name: String, physicalOnly: Bool = false) throws -> SmartDisk {
         let bsdName = name.hasPrefix("/dev/") ? String(name.dropFirst(5)) : name
         guard let matching = IOBSDNameMatching(kIOMainPortDefault, 0, bsdName) else {
             throw DriverError.noSuchDisk(bsdName)
@@ -129,6 +129,12 @@ final class SmartDisk {
             let result = IORegistryEntryGetParentEntry(entry, kIOServicePlane, &parent)
             IOObjectRelease(entry)
             guard result == KERN_SUCCESS, parent != 0 else { break }
+            // A synthesized APFS container can advertise Whole=true, but its ancestry
+            // passes through other media before reaching the actual disk's driver.
+            if physicalOnly, IOObjectConformsTo(parent, "IOMedia") != 0 {
+                IOObjectRelease(parent)
+                throw DriverError.notAttached(bsdName, "a logical media layer")
+            }
             entry = parent
         }
         let stack = classes.isEmpty ? "not a SCSI or USB disk" : "its driver stack is " + classes.prefix(4).joined(separator: " ← ")
@@ -150,7 +156,7 @@ final class SmartDisk {
             names.append(name)
         }
         return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-            .compactMap { try? find($0) }
+            .compactMap { try? find($0, physicalOnly: true) }
     }
 
     private static func isDriver(_ entry: io_registry_entry_t) -> Bool {

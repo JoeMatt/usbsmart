@@ -6,7 +6,7 @@
 
 import Foundation
 
-let toolVersion = "0.3.2"
+let toolVersion = "0.4.0"
 
 let usage = """
     usbsmart \(toolVersion): SMART data for SATA drives in USB docks. Read-only.
@@ -14,6 +14,7 @@ let usage = """
     usage:
       usbsmart                         list the disks the driver is attached to
       usbsmart <disk>                  identity, health verdict and attribute table
+      usbsmart --json                  read all connected supported drives into one JSON document
       usbsmart <disk> --smartctl [smartctl options]
                                        let smartctl decode the same pages with its drive
                                        database (default options: -a)
@@ -322,11 +323,27 @@ let saveDirectory = takeValue("--save")
 let wantRaw = takeFlag("--raw")
 let wantReplay = takeFlag("--replay")
 let wantDebug = takeFlag("--debug")
+let wantJSON = takeFlag("--json")
 
 if let unknown = arguments.first(where: { $0.hasPrefix("-") }) {
     fail("Unknown option \(unknown).\n\n" + usage, status: 2)
 }
 guard arguments.count <= 1 else { fail(usage, status: 2) }
+
+if wantJSON {
+    guard arguments.isEmpty, decodeDirectory == nil, saveDirectory == nil,
+          smartctlOptions == nil, !wantRaw, !wantReplay, !wantDebug else {
+        fail("--json is a standalone scan of all connected supported drives.\n\n" + usage, status: 2)
+    }
+    let scan = DriveScan.readConnected()
+    do {
+        FileHandle.standardOutput.write(try scan.json())
+        print()
+    } catch {
+        fail("Could not encode the scan. \(error)")
+    }
+    exit(scan.exitStatus)
+}
 
 let capture: Capture
 if let decodeDirectory {

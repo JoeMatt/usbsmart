@@ -1,9 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DrivesView: View {
     @ObservedObject var extensionModel: ExtensionModel
-    @StateObject private var model = DrivesModel()
+    @ObservedObject var model: DrivesModel
     @State private var showDriver = false
+    @State private var showHistory = false
+    @State private var showExport = false
+    @State private var exportDocument: ScanExport?
+    @State private var exportError: String?
 
     var body: some View {
         NavigationSplitView {
@@ -33,7 +38,9 @@ struct DrivesView: View {
         } detail: {
             if let drive = model.drives.first(where: { $0.id == model.selectedID }) {
                 if let report = drive.report {
-                    ReportView(report: report, readAt: drive.readAt, isSample: model.isSample)
+                    let scans = drive.snapshot?.driveId.flatMap { model.history.drives[$0] } ?? []
+                    ReportView(report: report, readAt: drive.readAt, isSample: model.isSample,
+                               snapshot: drive.snapshot, scans: scans, historyError: model.historyError)
                 } else {
                     ContentUnavailableView {
                         Label("Could not read this drive", systemImage: "exclamationmark.triangle")
@@ -61,11 +68,43 @@ struct DrivesView: View {
                 if model.isReading { ProgressView().controlSize(.small) }
                 Button { model.refresh() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                     .disabled(model.isReading || model.isSample).keyboardShortcut("r", modifiers: .command)
+                Button { showHistory = true } label: { Label("Scan history", systemImage: "clock.arrow.circlepath") }
+                    .disabled(model.isSample)
+                Button { exportScan() } label: { Label("Export JSON", systemImage: "square.and.arrow.up") }
+                    .disabled(model.lastRefresh == nil || model.isReading || model.isSample)
                 Button { showDriver = true } label: { Label("Driver setup", systemImage: "gearshape") }
             }
         }
         .frame(minWidth: 900, minHeight: 600)
         .sheet(isPresented: $showDriver) { driverSetup }
+        .sheet(isPresented: $showHistory) {
+            ScanHistoryView(history: model.history, selectedDriveId: selectedDriveId, error: model.historyError)
+        }
+        .fileExporter(isPresented: $showExport, document: exportDocument,
+                      contentType: .json, defaultFilename: "USBSmart scan") { result in
+            if case let .failure(error) = result { exportError = error.localizedDescription }
+        }
+        .alert("Could not export the scan", isPresented: Binding(
+            get: { exportError != nil }, set: { if !$0 { exportError = nil } }
+        )) {
+            Button("OK") { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
+        }
+    }
+
+    private var selectedDriveId: String? {
+        model.drives.first(where: { $0.id == model.selectedID })?.snapshot?.driveId
+    }
+
+    private func exportScan() {
+        do {
+            guard let data = try model.exportJSON() else { return }
+            exportDocument = ScanExport(data: data)
+            showExport = true
+        } catch {
+            exportError = error.localizedDescription
+        }
     }
 
     private var driverSetup: some View {
@@ -82,7 +121,7 @@ struct DrivesView: View {
                 .font(.caption).foregroundStyle(.secondary)
             Divider()
             Text("Bridge compatibility").font(.headline)
-            Text("Listed bridges use standard SAT commands. Only the VIA Labs VL715 has been verified with this driver; other matches are candidates for testing. UAS operation is unverified.")
+            Text("Listed bridges use standard SAT commands. The VIA Labs VL715 and Sabrent JMS561 have been verified. The other matches are candidates. UAS operation is unverified.")
                 .font(.caption).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
@@ -107,6 +146,10 @@ private struct ReportView: View {
     let report: DriveReport
     let readAt: Date
     let isSample: Bool
+    let snapshot: DriveSnapshot?
+    let scans: [DriveSnapshot]
+    let historyError: String?
+
     private var color: Color {
         switch report.verdict { case .passed: return .green; case .failed: return .red; case .unknown: return .orange }
     }
@@ -136,6 +179,11 @@ private struct ReportView: View {
                     metric("Power-on hours", value: report.metric(9))
                     metric("Reallocated sectors", value: report.metric(5))
                     metric("Pending sectors", value: report.metric(197))
+                }
+                if !isSample {
+                    GroupBox("Changed since last valid scan") {
+                        currentChanges.frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                    }
                 }
                 if !report.issues.isEmpty {
                     GroupBox("Report incomplete") {
@@ -194,6 +242,21 @@ private struct ReportView: View {
                 Text("Read \(readAt.formatted(date: .abbreviated, time: .standard)). Refresh to read again.")
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(28).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private var currentChanges: some View {
+        if let historyError {
+            Text(historyError).foregroundStyle(.secondary)
+        } else if snapshot?.driveId == nil {
+            Text("This drive did not provide a unique identity for history.").foregroundStyle(.secondary)
+        } else if let snapshot, snapshot.attributes.isEmpty {
+            Text("This scan has no valid SMART attributes to compare.").foregroundStyle(.secondary)
+        } else if let snapshot, scans.first?.readAt == snapshot.readAt, let previous = scans.dropFirst().first {
+            ScanChangesView(previous: previous, current: snapshot)
+        } else {
+            Text("First saved scan. Refresh or reconnect the drive to compare.").foregroundStyle(.secondary)
         }
     }
 

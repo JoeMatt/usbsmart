@@ -110,6 +110,22 @@ The [release instructions](packaging/release-instructions.txt) describe the thre
 profiles and the packaging workflow. The signed 0.3.2 driver activated on a Mac Studio and
 returned distinct SMART reports from all four bays of a Sabrent JMS561 dock.
 
+### Scan history and JSON in 0.4
+
+The app keeps up to 100 scans with valid SMART attributes per drive on this Mac. Select a
+connected drive to see what changed since its last valid scan. Open **Scan history** to
+browse earlier scans, including drives that are unplugged. History follows the drive when
+its `diskN` changes. Drives without a unique identity are shown in the scan without history.
+
+**Export JSON** saves the last completed scan for all connected drives shown in the app.
+Run `usbsmart --json` for a fresh scan. The document has `schemaVersion`, `scannedAt`, and
+a `drives` array with one `ok`, `partial`, or `error` row per supported drive. Readable
+reports include a stable hashed `driveId` when available, health and its source, and raw
+and normalized SMART values. Raw serial numbers and WWNs are omitted. An empty list means
+no supported disks were attached. The CLI returns 4 if any drive reports failure, 1 if a
+read was incomplete or failed, and 0 otherwise. The JSON document is available in all
+three cases.
+
 ## Install
 
 You need a paid Apple Developer account, Xcode with the DriverKit SDK, and

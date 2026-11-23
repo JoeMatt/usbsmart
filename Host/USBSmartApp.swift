@@ -75,10 +75,11 @@ final class ExtensionModel: NSObject, ObservableObject, OSSystemExtensionRequest
 @main
 struct USBSmartApp: App {
     @StateObject private var model = ExtensionModel()
+    @StateObject private var drives = DrivesModel()
 
     var body: some Scene {
         WindowGroup("USBSmart") {
-            DrivesView(extensionModel: model)
+            DrivesView(extensionModel: model, model: drives)
                 .onAppear {
                     if CommandLine.arguments.contains("--activate") { model.activate() }
                     else if CommandLine.arguments.contains("--deactivate") { model.deactivate() }

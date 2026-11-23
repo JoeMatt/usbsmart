@@ -9,8 +9,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     # Bump both for any driver change: macOS will not replace an installed extension that has
     # the same version.
-    MARKETING_VERSION: "0.3.2"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "0.4.0"
+    CURRENT_PROJECT_VERSION: "7"
 targets:
   USBSmartHost:
     type: application
@@ -51,6 +51,8 @@ targets:
     platform: macOS
     sources:
       - CLI
+      - Shared/DriveReport.swift
+      - Shared/DriveScan.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.cli

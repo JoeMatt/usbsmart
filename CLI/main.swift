@@ -6,10 +6,11 @@
 
 import Foundation
 
-let toolVersion = "0.4.1"
+let toolVersion = "0.5.0"
 
 let usage = """
-    usbsmart \(toolVersion): SMART data for SATA drives in USB docks. Read-only.
+    usbsmart \(toolVersion): SMART data and self-tests for SATA drives in USB docks.
+    Never writes to a drive's data.
 
     usage:
       usbsmart                         list the disks the driver is attached to
@@ -24,6 +25,12 @@ let usage = """
                                        which `smartctl -a -` reads from standard input
       usbsmart --decode <dir> [...]    work from pages saved earlier instead of a drive
       usbsmart <disk> --debug          also show each command sent and the bridge's answer
+      usbsmart <disk> --selftest short|long|conveyance|abort
+                                       start (or stop) one of the drive's own background
+                                       self-tests. The drive stays usable; a long test reads
+                                       the whole surface and takes hours on a big disk
+      usbsmart <disk> --selftest-status
+                                       whether a test is running, and the drive's test log
 
     <disk> is a BSD name such as disk9 or /dev/disk9.
 
@@ -144,7 +151,8 @@ struct Capture {
     }
 
     var report: DriveReport {
-        DriveReport(identify: identify, data: data, thresholds: thresholds, health: health)
+        DriveReport(identify: identify, data: data, thresholds: thresholds, health: health,
+                    selfTestLog: logs[0x06], errorLog: logs[0x01])
     }
 }
 
@@ -285,6 +293,86 @@ func runSmartctl(_ capture: Capture, options: [String]) -> Int32 {
     return process.terminationStatus
 }
 
+// MARK: Self-tests
+
+func printSelfTest(_ report: DriveReport) {
+    guard let test = report.selfTest else {
+        print("The drive returned no SMART data page, so its self-test state is unknown.")
+        return
+    }
+    if !test.supported { print("The drive does not say it supports self-tests.") }
+    if test.running {
+        print("Self-test:        in progress, \(test.percentRemaining ?? 0)% remaining")
+    } else {
+        print("Self-test:        \(test.status)")
+    }
+    let times = [test.shortMinutes.map { "short \($0) min" }, test.longMinutes.map { "long \($0) min" }].compactMap { $0 }
+    if !times.isEmpty { print("Expected time:    " + times.joined(separator: ", ")) }
+    if let errors = test.ataErrorCount { print("ATA error count:  \(errors)") }
+    print("")
+    if test.log.isEmpty {
+        print("The self-test log is empty or could not be read.")
+        return
+    }
+    print("Num  Test         Result                                    Remaining  LifeTime(hours)  LBA_of_first_error")
+    for (index, entry) in test.log.enumerated() {
+        print(String(format: "#%2d  ", index + 1)
+              + entry.type.padding(toLength: 13, withPad: " ", startingAt: 0)
+              + entry.result.padding(toLength: 42, withPad: " ", startingAt: 0)
+              + "\(entry.percentRemaining)%".padding(toLength: 11, withPad: " ", startingAt: 0)
+              + "\(entry.lifetimeHours)".padding(toLength: 17, withPad: " ", startingAt: 0)
+              + (entry.firstFailingLBA.map(String.init) ?? "-"))
+    }
+}
+
+/// Starts or stops a background self-test. Returns the exit status.
+func startSelfTest(_ disk: SmartDisk, _ kind: SelfTestKind, debug: Bool) -> Int32 {
+    do {
+        // Ask the drive first: a clear "not supported" beats a bridge error.
+        let before = try disk.run(.readData)
+        let info = before.succeeded && before.realizedBytes == 512
+            ? SelfTestInfo(data: before.data, selfTestLog: nil, errorLog: nil) : nil
+        if let info, kind != .abort {
+            if !info.supported { fail("\(disk.bsdName): the drive does not say it supports self-tests.") }
+            if kind == .conveyance && !info.conveyanceSupported {
+                fail("\(disk.bsdName): the drive does not support the conveyance self-test.")
+            }
+            if info.running {
+                fail("\(disk.bsdName): a self-test is already running (\(info.percentRemaining ?? 0)% remaining). "
+                     + "Stop it with --selftest abort, or wait.")
+            }
+        }
+        let reply = try disk.run(.selfTest, argument: UInt32(kind.rawValue))
+        if debug {
+            note("selfTest cdb \(reply.cdb.hex) -> \(reply.succeeded ? "ok" : reply.failure)")
+        }
+        guard reply.succeeded else {
+            fail("\(disk.bsdName): the self-test command was not accepted: \(reply.failure)\n"
+                 + "The bridge may not pass this command, or the installed driver is older than 0.5.0 "
+                 + "(update and reactivate it in /Applications/USBSmart.app).")
+        }
+        switch kind {
+        case .abort:
+            print("\(disk.bsdName): self-test stopped.")
+        default:
+            let minutes = kind == .short ? info?.shortMinutes : kind == .long ? info?.longMinutes : nil
+            print("\(disk.bsdName): \(kind) self-test started in the background"
+                  + (minutes.map { ", about \($0) minutes" } ?? "") + ".")
+            print("Check on it with: usbsmart \(disk.bsdName) --selftest-status")
+            print("Unplugging, sleeping or power-cycling the dock stops the test.")
+        }
+        return 0
+    } catch let error as DriverError {
+        if case .callFailed = error {
+            fail("\(disk.bsdName): \(error)\nThe installed driver is older than 0.5.0 and has no self-test command. "
+                 + "Update and reactivate it in /Applications/USBSmart.app.")
+        }
+        fail("\(error)")
+    } catch {
+        fail("\(error)")
+    }
+}
+
 // MARK: Arguments
 
 var arguments = Array(CommandLine.arguments.dropFirst())
@@ -324,6 +412,8 @@ let wantRaw = takeFlag("--raw")
 let wantReplay = takeFlag("--replay")
 let wantDebug = takeFlag("--debug")
 let wantJSON = takeFlag("--json")
+let selfTestName = takeValue("--selftest")
+let wantSelfTestStatus = takeFlag("--selftest-status")
 
 if let unknown = arguments.first(where: { $0.hasPrefix("-") }) {
     fail("Unknown option \(unknown).\n\n" + usage, status: 2)
@@ -332,7 +422,8 @@ guard arguments.count <= 1 else { fail(usage, status: 2) }
 
 if wantJSON {
     guard arguments.isEmpty, decodeDirectory == nil, saveDirectory == nil,
-          smartctlOptions == nil, !wantRaw, !wantReplay, !wantDebug else {
+          smartctlOptions == nil, !wantRaw, !wantReplay, !wantDebug,
+          selfTestName == nil, !wantSelfTestStatus else {
         fail("--json is a standalone scan of all connected supported drives.\n\n" + usage, status: 2)
     }
     let scan = DriveScan.readConnected()
@@ -348,16 +439,24 @@ if wantJSON {
 let capture: Capture
 if let decodeDirectory {
     guard arguments.isEmpty else { fail("--decode takes the place of a disk name.\n\n" + usage, status: 2) }
+    guard selfTestName == nil else { fail("--selftest needs a real disk.\n\n" + usage, status: 2) }
     capture = Capture(directory: decodeDirectory)
 } else if let name = arguments.first {
     do {
         let disk = try SmartDisk.find(name)
-        capture = try Capture(disk: disk, withLogs: smartctlOptions != nil || wantReplay || saveDirectory != nil,
+        if let selfTestName {
+            guard let kind = SelfTestKind(name: selfTestName) else {
+                fail("--selftest takes short, long, conveyance or abort.\n\n" + usage, status: 2)
+            }
+            exit(startSelfTest(disk, kind, debug: wantDebug))
+        }
+        capture = try Capture(disk: disk, withLogs: smartctlOptions != nil || wantReplay || saveDirectory != nil || wantSelfTestStatus,
                               debug: wantDebug)
     } catch {
         fail("\(error)")
     }
 } else {
+    guard selfTestName == nil, !wantSelfTestStatus else { fail("Name the disk to test.\n\n" + usage, status: 2) }
     let disks = SmartDisk.all()
     if disks.isEmpty {
         print("The USBSmart driver is not attached to any disk.")
@@ -398,6 +497,11 @@ if wantReplay {
     if let thresholds = capture.thresholds { print("\nSMART READ THRESHOLDS\n" + hexDump(thresholds)) }
 } else if let smartctlOptions {
     exit(runSmartctl(capture, options: smartctlOptions))
+} else if wantSelfTestStatus {
+    print("usbsmart \(toolVersion): \(capture.source)  \(report.identity.model)")
+    print("")
+    printSelfTest(report)
+    exit(report.selfTest?.lastFailed == true ? 4 : 0)
 } else {
     printReport(capture, report: report)
 }

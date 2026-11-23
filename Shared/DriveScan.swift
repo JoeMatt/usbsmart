@@ -15,6 +15,9 @@ struct DriveSnapshot: Codable {
     let issues: [String]
     let concerns: [String]
     let attributes: [AttributeRow]
+    /// Added in 0.5.0; absent in older saved scans.
+    var rotation: String? = nil
+    var selfTest: SelfTestInfo? = nil
 
     struct AttributeRow: Codable {
         let id: UInt8
@@ -36,6 +39,8 @@ struct DriveSnapshot: Codable {
         smartSupported = report.identity.smartSupported
         smartEnabled = report.identity.smartEnabled
         verdict = report.verdict.rawValue.lowercased()
+        rotation = report.identity.rotation
+        selfTest = report.selfTest
         switch report.health {
         case .failed: verdictSource = "drive"
         case .passed where report.verdict == .passed: verdictSource = "drive"

@@ -4,6 +4,6 @@ A macOS app for reading SATA drive health through supported USB docks. Includes 
 
 Install: drag the app into Applications, open Driver setup, activate and approve the driver. Safely eject mounted volumes before reconnecting the dock.
 
-Apple silicon, macOS 14 or later. SMART reads verified on a VIA Labs VL715 and all four bays of a Sabrent dock with a JMicron JMS561 (152d:1561). Other bridge IDs are listed as candidates. SMART reads do not write to the drive. macOS still controls ordinary filesystem access.
+Apple silicon, macOS 14 or later. SMART reads verified on a VIA Labs VL715 and all four bays of a Sabrent dock with a JMicron JMS561 (152d:1561). Other bridge IDs are listed as candidates. SMART reads do not write to the drive. A self-test runs inside the drive and does not change stored data. macOS still controls ordinary filesystem access.
 
-Version 0.4.1 makes the CLI, app, and JSON export use the same health verdict. A readable report with all threshold values set to zero shows Unknown when the drive's own verdict is unavailable. Verify the downloads with SHA256SUMS.txt.
+Version 0.5.0 adds drive self-tests to the command-line tool: usbsmart diskN --selftest short|long|conveyance|abort starts or stops the drive's own background test, and --selftest-status shows progress, the self-test log and the ATA error count. Reports and JSON export include the same self-test data. This version updates the driver, so approve it again if macOS asks and reconnect the dock. Verify the downloads with SHA256SUMS.txt.

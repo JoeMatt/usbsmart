@@ -368,8 +368,8 @@ SMART overall-health: <span class="p">PASSED</span>
   <section id="read-only">
     <div class="wrap split">
       <div class="sticky">
-        <span class="eyebrow reveal">Read-only</span>
-        <h2 class="reveal" style="--d:.08s">Five commands, all of them reads.</h2>
+        <span class="eyebrow reveal">No data writes</span>
+        <h2 class="reveal" style="--d:.08s">Six commands. Five read, one runs a self-test.</h2>
         <p class="lede reveal" style="--d:.16s">Each command is built by Apple's helpers, then checked byte by byte against this list before it is sent (<code>IsAllowedCDB</code> in <code>Driver/USBSmartDevice.cpp</code>). A command that fails the check comes back to the tool unsent, with its 16 bytes. The drives this was written for may hold the only copy of someone's data.</p>
       </div>
       <div class="shell reveal"><div class="core">
@@ -380,6 +380,7 @@ SMART overall-health: <span class="p">PASSED</span>
           <li><span class="n">03</span><div><strong>SMART READ THRESHOLDS</strong><span><code>B0h / D1h</code>. The failure threshold for each attribute. 512 bytes in.</span></div></li>
           <li><span class="n">04</span><div><strong>SMART READ LOG</strong><span><code>B0h / D5h</code>. One sector of one log: directory, error log, self-test log.</span></div></li>
           <li><span class="n">05</span><div><strong>SMART RETURN STATUS</strong><span><code>B0h / DAh</code>. No data, the answer comes back in the LBA registers.</span></div></li>
+          <li><span class="n">06</span><div><strong>SMART EXECUTE OFF-LINE IMMEDIATE</strong><span><code>B0h / D4h</code>. Starts or stops the drive's own short, extended or conveyance self-test, in the background. No data, only when you ask (<code>--selftest</code>). The drive reads its own surface; nothing is written to your files.</span></div></li>
         </ul>
         <p style="margin-top:1.4rem">macOS itself still mounts any volume it recognises on the disk, read-write, as it does without the driver.</p>
       </div></div>

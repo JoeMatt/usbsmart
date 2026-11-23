@@ -82,14 +82,29 @@ It needs `com.apple.developer.driverkit`, `...driverkit.family.scsicontroller` a
 `...driverkit.allow-any-userclient-access`, all of which Xcode's automatic signing adds to a
 development profile on a paid developer account without a request to Apple.
 
-## Read-only
+## What the driver can send
 
-The driver can send five ATA commands, all of which only read: IDENTIFY DEVICE, SMART READ
-DATA, SMART READ THRESHOLDS, SMART READ LOG and SMART RETURN STATUS. Each command is checked
-byte by byte against that list after it is built and before it is sent
-(`IsAllowedCDB` in `Driver/USBSmartDevice.cpp`). There is no code path for self-tests, SMART
-enable/disable, log writes, firmware or any other command, and none should be added casually:
-the drives this was written for may hold the only copy of someone's data.
+The driver can send six ATA commands. Five only read: IDENTIFY DEVICE, SMART READ DATA, SMART
+READ THRESHOLDS, SMART READ LOG and SMART RETURN STATUS. The sixth, added in 0.5.0, is SMART
+EXECUTE OFF-LINE IMMEDIATE, limited to starting the drive's own short, long or conveyance
+self-test in the background, or aborting one. A self-test reads the drive's surface and writes
+no user data; the captive forms that hold the drive busy are refused. Each command is checked
+byte by byte against that list after it is built and before it is sent (`IsAllowedCDB` in
+`Driver/USBSmartDevice.cpp`). There is no code path for SMART enable/disable, log writes,
+firmware or any other command, and none should be added casually: the drives this was written
+for may hold the only copy of someone's data.
+
+A long self-test makes a drive read every sector, which takes hours and is real work for a
+drive that is already failing. Copy anything you need off a suspect drive before running one.
+
+```sh
+usbsmart disk9 --selftest short      # or long, conveyance, abort
+usbsmart disk9 --selftest-status     # progress and the drive's self-test log
+```
+
+`usbsmart --json` carries the same information per drive in `selfTest` (running, percent
+remaining, expected times, the log newest first, and the ATA error count) plus `rotation`.
+Starting a test needs driver 0.5.0 or later; status and logs work with older drivers.
 
 One thing the driver does not change: macOS itself still mounts any volume it recognises on the
 disk, read-write, exactly as it does without this driver.

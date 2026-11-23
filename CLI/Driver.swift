@@ -8,13 +8,15 @@
 import Foundation
 import IOKit
 
-/// The driver's whole command set (USBSmartCommand in the driver). All read-only.
+/// The driver's whole command set (USBSmartCommand in the driver). All read-only except
+/// selfTest, which starts or stops one of the drive's own background self-tests.
 enum SmartCommand: UInt32 {
     case identify = 0
     case readData = 1
     case readThresholds = 2
     case returnStatus = 3
     case readLog = 4
+    case selfTest = 5
 }
 
 /// USBSmartReply, decoded.
@@ -50,7 +52,7 @@ struct Reply {
     /// One line for error messages.
     var failure: String {
         if refused {
-            return "the driver's read-only check refused the command (CDB " + cdb.hex + ")"
+            return "the driver's safety check refused the command (CDB " + cdb.hex + ")"
         }
         var text = String(format: "UserSendCDB 0x%08x, service response %u, task status %u",
                           UInt32(bitPattern: sendResult), serviceResponse, taskStatus)

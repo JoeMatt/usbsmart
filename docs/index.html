@@ -244,7 +244,7 @@
       <h1 class="reveal" style="--d:.08s; max-width: 16ch">Check a hard drive's health through a USB dock.</h1>
       <p class="lede reveal" style="--d:.16s; max-width: 44rem">Every hard drive keeps a health report on itself: hours used, bad spots, temperature. A Mac can't read that report when the drive sits in a USB dock or enclosure, and the apps that can ask you to lower the Mac's security first. <code>usbsmart</code> reads it with the Mac's security left alone.</p>
       <div class="actions reveal" style="--d:.24s">
-        <a class="btn solid" href="#get">Get it
+        <a class="btn solid" href="https://github.com/JoeMatt/usbsmart/releases/download/v0.3.2/USBSmart-0.3.2-arm64.dmg">Download for Mac
           <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
         <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart">View the source
           <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4.5 11.5l7-7M5.5 4.5h6v6"/></svg></span></a>
@@ -339,7 +339,7 @@ SMART overall-health: <span class="p">PASSED</span>
         <div class="shell reveal"><div class="core">
           <span class="state info"><i></i>Matching</span>
           <h3>Exact bridge matches</h3>
-          <p><code>bridges.json</code> generates 12 exact USB vendor/product matches, each restricted through <code>IOParentMatch -> IOPropertyMatch</code>. The same SAT command code serves all of them. There is no wildcard match for every USB disk.</p>
+          <p><code>bridges.json</code> generates 91 exact USB vendor/product matches, each restricted through <code>IOParentMatch -> IOPropertyMatch</code>. The same SAT command code serves all of them. There is no wildcard match for every USB disk.</p>
         </div></div>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state ok"><i></i>Signing</span>
@@ -414,7 +414,7 @@ SMART overall-health: <span class="p">PASSED</span>
         <div class="shell reveal" style="--d:.08s"><div class="core">
           <span class="state warn"><i></i>Untested</span>
           <h3>Other docks</h3>
-          <p>Twelve bridge IDs are listed across VIA Labs, ASMedia, JMicron and LucidPort. The VL715 is verified; the other 11 are candidates based on the smartmontools SAT database. They still need testing with this macOS driver. Driver setup shows the compatibility list.</p>
+          <p>SMART reads work on the VIA Labs VL715 and all four bays of a Sabrent dock with the JMicron JMS561. Driver Setup lists 89 other bridge IDs to try.</p>
         </div></div>
         <div class="shell reveal" style="--d:.16s"><div class="core">
           <span class="state no"><i></i>Not supported</span>
@@ -434,20 +434,20 @@ SMART overall-health: <span class="p">PASSED</span>
     <div class="wrap split">
       <div class="sticky">
         <span class="eyebrow reveal">Get it</span>
-        <h2 class="reveal" style="--d:.08s">Signed and notarized. Final testing next.</h2>
-        <p class="lede reveal" style="--d:.16s">Apple has granted distribution access. USBSmart 0.3.1 is signed and notarized, with the public download waiting on the final driver activation check. You will not need Xcode or a developer account to use it. The source build guide remains available for developers.</p>
+        <h2 class="reveal" style="--d:.08s">Download USBSmart 0.3.2</h2>
+        <p class="lede reveal" style="--d:.16s">The app shows your drives and their health reports in one window. The download is signed with Developer ID and notarized by Apple. You can install it without a developer account or Xcode.</p>
         <div class="actions reveal" style="--d:.24s; margin-top:2rem; display:flex">
-          <a class="btn ghost" href="https://github.com/JoeMatt/usbsmart#install">Source build guide
+          <a class="btn solid" href="https://github.com/JoeMatt/usbsmart/releases/download/v0.3.2/USBSmart-0.3.2-arm64.dmg">Download DMG
             <span class="well"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a>
         </div>
       </div>
       <div class="shell reveal"><div class="core">
         <span class="state info"><i></i>What you need</span>
         <ul class="list" style="margin-top:1rem">
-          <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Built for macOS 14 or later. Tested on an M2 Max with macOS 27.2.1 only.</span></div></li>
-          <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>A SATA drive in a listed USB bridge. The VL715 is verified; 11 other bridge IDs are listed as untested candidates.</span></div></li>
+          <li><span class="n">01</span><div><strong>An Apple silicon Mac</strong><span>Requires macOS 14 or later.</span></div></li>
+          <li><span class="n">02</span><div><strong>A hard drive in a supported USB dock</strong><span>Driver Setup shows the tested docks and other candidates.</span></div></li>
           <li><span class="n">03</span><div><strong>The app in Applications</strong><span>Drag USBSmart into Applications and open it. Its driver is included.</span></div></li>
-          <li><span class="n">04</span><div><strong>One approval in System Settings</strong><span>Activate the driver in the app, then approve USBSmart under Driver Extensions. Your Mac’s security settings stay as they are.</span></div></li>
+          <li><span class="n">04</span><div><strong>One approval in System Settings</strong><span>Activate the driver in the app, then approve USBSmart under Driver Extensions. Eject any mounted volumes before reconnecting the dock.</span></div></li>
         </ul>
       </div></div>
     </div>

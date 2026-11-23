@@ -1,10 +1,10 @@
 Developer ID release preparation
 
-Apple granted DriverKit, SCSI Controller and scoped UserClient Access distribution. The Developer ID profiles for the app, driver and CLI have been generated and verified. The 0.3.1 app and DMG were notarized, stapled and accepted by Gatekeeper. Hardware activation of this distribution build remains to be checked. Unsigned preview images are packaging checks only and must not be distributed as working installers.
+Apple granted DriverKit, SCSI Controller and scoped UserClient Access distribution. The Developer ID profiles for the app, driver and CLI have been generated and verified. The 0.3.2 distribution driver activated on a Mac Studio and read SMART data from all four bays of the Sabrent JMS561 dock. Unsigned preview images are packaging checks only and must not be distributed as working installers.
 
 LOCAL RELEASE (no certificate/key export required)
 
-1. After Apple approves, enable the distribution capabilities on the existing app IDs. Create Developer ID provisioning profiles for the host app, driver and CLI using the same Developer ID Application certificate. Download both profiles outside this repository. Development profiles will be rejected.
+1. After Apple approves, enable the distribution capabilities on the existing app IDs. Create Developer ID provisioning profiles for the host app, driver and CLI using the same Developer ID Application certificate. Download all three profiles outside this repository. Development profiles will be rejected.
 
 2. Signing identity and notarization defaults are configured locally. Load them with:
    source ~/.config/driver-releases/usbsmart.local.env

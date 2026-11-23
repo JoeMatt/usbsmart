@@ -48,7 +48,7 @@ Seagate ST8000DM004.
 | SMART READ LOG (error log, self-test log) | works |
 | SMART RETURN STATUS (the drive's own pass/fail verdict) | the command completes, but this bridge does not hand back the drive's registers, so the verdict is worked out from the thresholds instead (smartctl does the same) |
 | `--smartctl` hand-off | works with smartmontools 7.5 |
-| Additional SAT bridges | 11 candidate matches added; not tested with this macOS driver |
+| Additional SAT bridges | See the compatibility list in Driver Setup |
 | UAS bridges | not tried |
 
 ## How it works
@@ -96,9 +96,10 @@ disk, read-write, exactly as it does without this driver.
 
 ## Downloadable releases
 
-Apple has granted distribution access. USBSmart 0.3.1 is Developer ID signed, notarized and
-stapled; both the app and DMG pass Gatekeeper. It is staged for installation testing before
-public release. No developer account or Xcode is needed to run the distribution build.
+[Download USBSmart 0.3.2 for Apple silicon](https://github.com/JoeMatt/usbsmart/releases/download/v0.3.2/USBSmart-0.3.2-arm64.dmg).
+Drag USBSmart into Applications. Open Driver Setup, activate the driver, then approve it in
+System Settings. Eject any mounted volumes before reconnecting the dock. The app requires
+macOS 14 or later and runs without a developer account or Xcode.
 
 The signed GUI and bundled CLI are authorized to connect to this driver through
 `com.apple.developer.driverkit.userclient-access`. The distribution driver does not claim
@@ -106,8 +107,8 @@ The signed GUI and bundled CLI are authorized to connect to this driver through
 a signed launcher preserving the usual command path.
 
 The [release instructions](packaging/release-instructions.txt) describe the three verified
-profiles and the packaging workflow. Activation and SMART reads with this distribution build
-still need testing on hardware; notarization alone does not establish that they work.
+profiles and the packaging workflow. The signed 0.3.2 driver activated on a Mac Studio and
+returned distinct SMART reports from all four bays of a Sabrent JMS561 dock.
 
 ## Install
 
@@ -190,7 +191,7 @@ Saved pages contain the drive's serial number. `captures/` is git-ignored for th
 
 ## Adding another bridge
 
-The driver has 12 exact USB bridge matches. `bridges.json` is the source of truth, and
+`bridges.json` lists the exact USB bridge IDs.
 `scripts/generate-bridges.py` generates both the driver personalities in `Driver/Info.plist`
 and the compatibility list in the app. The driver code uses the same standard SAT commands
 for every match.
@@ -200,13 +201,14 @@ for every match.
 | `2109:0715` | VIA Labs VL715 | Verified on hardware |
 | `174c:55aa`, `174c:1153`, `174c:235c` | ASMedia SATA | Untested candidates |
 | `152d:0567`, `152d:0577`, `152d:0578`, `152d:0579`, `152d:0580` | JMicron SATA | Untested candidates |
+| `152d:1561` | JMicron JMS561 (Sabrent SATA dock) | SMART reads verified on four bays |
 | `1759:5000`, `1759:5002`, `1759:5100` | LucidPort SATA | Untested candidates |
 
-Candidate selection follows the SAT entries in the
-[smartmontools bridge database](https://github.com/smartmontools/smartmontools/blob/main/drivedb/drivedb.h).
-Its reports establish a reason to try standard SAT, not proof that Apple's `UserSendCDB`
-works on each bridge. UAS operation remains unverified. No vendor-wide or all-USB match is
-installed, and known NVMe-only products are excluded.
+The catalog also includes exact USB IDs from a pinned
+[smartmontools bridge database snapshot](https://github.com/smartmontools/smartmontools/blob/3e35033664efd115a1ca523701f9f41a10b94b6b/drivedb/drivedb.h).
+The imported entries use plain `-d sat` without a firmware restriction, warning, or conflicting
+mode. Each imported ID is a candidate until tested through Apple's `UserSendCDB`. UAS operation
+remains unverified. The driver matches exact IDs individually.
 
 To add a bridge, add its exact USB vendor/product pair to `bridges.json` with `verified: false`,
 then run `python3 scripts/generate-bridges.py`. Bump the driver version, rebuild and activate,

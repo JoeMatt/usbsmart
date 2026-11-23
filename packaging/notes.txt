@@ -4,6 +4,6 @@ A macOS app for reading SATA drive health through supported USB docks. Includes 
 
 Install: drag the app into Applications, open Driver setup, activate and approve the driver. Safely eject mounted volumes before reconnecting the dock.
 
-Apple silicon, macOS 14 or later. Verified on M2 Max, macOS 27.2.1, with a VIA Labs VL715. Eleven other bridge IDs are untested candidates. UAS and NVMe bridges are not verified. SMART reads do not write to the drive; macOS still controls ordinary filesystem access.
+Apple silicon, macOS 14 or later. SMART reads verified on a VIA Labs VL715 and all four bays of a Sabrent dock with a JMicron JMS561 (152d:1561). Other bridge IDs are listed as candidates. SMART reads do not write to the drive. macOS still controls ordinary filesystem access.
 
-Version 0.3.1 is Developer ID signed, notarized and stapled. The app and CLI use scoped client entitlements granted by Apple; only the signed clients claim access to this driver. Hardware activation and SMART reads with the distribution build are pending verification. Verify SHA256SUMS.txt before installation.
+Version 0.3.2 is signed with Developer ID and notarized by Apple. The app and CLI use scoped client entitlements to open the driver. Verify the downloads with SHA256SUMS.txt.

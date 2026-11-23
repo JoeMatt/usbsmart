@@ -67,25 +67,31 @@ struct Capture {
             return reply
         }
         let identifyReply = try run(.identify)
-        guard identifyReply.succeeded else {
-            fail("\(disk.bsdName): IDENTIFY DEVICE failed: \(identifyReply.failure)"
-                 + (identifyReply.refused ? "" : "\nThe bridge may not support ATA pass-through, or the drive is not answering."))
+        guard identifyReply.succeeded, identifyReply.realizedBytes == 512 else {
+            let reason = identifyReply.succeeded ? "The bridge returned an incomplete page." : identifyReply.failure
+            throw DriveReport.ReadError("\(disk.bsdName): IDENTIFY DEVICE failed: \(reason)"
+                + (identifyReply.refused || identifyReply.succeeded ? "" : "\nThe bridge may not support ATA pass-through, or the drive is not answering."))
         }
         identify = identifyReply.data
 
-        let dataReply = try run(.readData)
-        if dataReply.succeeded {
-            data = dataReply.data
-        } else {
-            note("SMART READ DATA failed: \(dataReply.failure)")
+        func page(_ command: SmartCommand, label: String) -> [UInt8]? {
+            do {
+                let reply = try run(command)
+                guard reply.succeeded, reply.realizedBytes == 512 else {
+                    let reason = reply.succeeded ? "The bridge returned an incomplete page." : reply.failure
+                    note("\(label) failed: \(reason)")
+                    return nil
+                }
+                return reply.data
+            } catch {
+                note("\(label) failed: \(error)")
+                return nil
+            }
         }
-        let thresholdReply = try run(.readThresholds)
-        if thresholdReply.succeeded {
-            thresholds = thresholdReply.data
-        } else {
-            note("SMART READ THRESHOLDS failed: \(thresholdReply.failure)")
-        }
-        health = Health(try run(.returnStatus))
+        data = page(.readData, label: "SMART READ DATA")
+        thresholds = page(.readThresholds, label: "SMART READ THRESHOLDS")
+        do { health = Health(try run(.returnStatus)) }
+        catch { health = .unknown(String(describing: error)) }
 
         if withLogs {
             for address in Capture.logAddresses {
@@ -137,11 +143,8 @@ struct Capture {
         }
     }
 
-    /// True when the drive's own verdict is failure or an attribute is at or below its threshold.
-    var reportsFailure: Bool {
-        if case .failed = health { return true }
-        guard let data else { return false }
-        return SmartTable(data: data, thresholds: thresholds).attributes.contains { $0.whenFailed == "FAILING_NOW" }
+    var report: DriveReport {
+        DriveReport(identify: identify, data: data, thresholds: thresholds, health: health)
     }
 }
 
@@ -153,8 +156,8 @@ func hexDump(_ page: [UInt8]) -> String {
     }.joined(separator: "\n")
 }
 
-func printReport(_ capture: Capture) {
-    let identity = Identity(capture.identify)
+func printReport(_ capture: Capture, report: DriveReport) {
+    let identity = report.identity
     print("usbsmart \(toolVersion): \(capture.source)")
     print("")
     print("Device Model:     \(identity.model)")
@@ -172,7 +175,18 @@ func printReport(_ capture: Capture) {
     print("SMART support:    \(support)")
     print("")
 
-    guard let data = capture.data else {
+    switch (report.verdict, report.health) {
+    case (.passed, .passed):
+        print("SMART overall-health self-assessment test result: PASSED")
+    case (.failed, .failed):
+        print("SMART overall-health self-assessment test result: FAILED!")
+        print("The drive reports that a failure threshold has been exceeded. Back up its data now.")
+    default:
+        print("SMART overall-health: \(report.verdict.rawValue.uppercased()) (\(report.verdictDetail))")
+    }
+    print("")
+
+    guard let table = report.table else {
         if identity.smartSupported && !identity.smartEnabled {
             print("SMART is switched off on this drive, so it returned no attributes. usbsmart is read-only and will not switch it on.")
         } else {
@@ -180,20 +194,6 @@ func printReport(_ capture: Capture) {
         }
         return
     }
-    let table = SmartTable(data: data, thresholds: capture.thresholds)
-
-    switch capture.health {
-    case .passed:
-        print("SMART overall-health self-assessment test result: PASSED")
-    case .failed:
-        print("SMART overall-health self-assessment test result: FAILED!")
-        print("The drive reports that a failure threshold has been exceeded. Back up its data now.")
-    case .unknown(let reason):
-        let failing = table.attributes.filter { $0.whenFailed == "FAILING_NOW" }
-        let derived = capture.thresholds == nil ? "UNKNOWN" : (failing.isEmpty ? "PASSED" : "FAILED!")
-        print("SMART overall-health: \(derived) (worked out from the attribute thresholds; the drive's own verdict was not available: \(reason))")
-    }
-    print("")
 
     if !table.dataChecksumValid { print("Warning: the attribute page's checksum is wrong; the values below may be corrupt.") }
     if table.thresholdChecksumValid == false { print("Warning: the threshold page's checksum is wrong.") }
@@ -389,6 +389,7 @@ if let saveDirectory {
     }
 }
 
+let report = capture.report
 if wantReplay {
     print(replayText(capture), terminator: "")
 } else if wantRaw {
@@ -398,6 +399,6 @@ if wantReplay {
 } else if let smartctlOptions {
     exit(runSmartctl(capture, options: smartctlOptions))
 } else {
-    printReport(capture)
+    printReport(capture, report: report)
 }
-exit(capture.reportsFailure ? 4 : 0)
+exit(report.verdict == .failed ? 4 : 0)

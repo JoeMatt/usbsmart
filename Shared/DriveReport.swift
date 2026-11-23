@@ -64,17 +64,23 @@ struct DriveReport {
     }
 
     var verdictDetail: String {
-        switch health {
-        case .failed: return "The drive reports a failure. Copy important data to another drive."
-        case .passed:
-            return verdict == .failed ? "An attribute has reached its failure threshold. Copy important data to another drive."
-                : "The drive returned a passing SMART status. SMART cannot predict every failure."
-        case .unknown:
-            switch verdict {
-            case .passed: return "No attribute has reached its failure threshold. This verdict is calculated from the attributes; the bridge did not return the drive's own verdict."
-            case .failed: return "An attribute has reached its failure threshold. Copy important data to another drive."
-            case .unknown: return "There is not enough valid SMART data to judge this drive's health."
+        switch (verdict, health) {
+        case (.failed, .failed):
+            return "The drive reports a failure. Copy important data to another drive."
+        case (.failed, _):
+            return "An attribute has reached its failure threshold. Copy important data to another drive."
+        case (.passed, .passed):
+            return "The drive returned a passing SMART status. SMART cannot predict every failure."
+        case (.passed, _):
+            return "No attribute has reached its failure threshold. This verdict is calculated from the attributes; the bridge did not return the drive's own verdict."
+        case (.unknown, .unknown):
+            if let table, table.dataChecksumValid, table.thresholdChecksumValid == true,
+               !table.attributes.isEmpty, table.attributes.allSatisfy({ $0.threshold == 0 }) {
+                return "The drive's own SMART verdict was unavailable, and all reported thresholds are zero."
             }
+            return "There is not enough valid SMART data to judge this drive's health."
+        case (.unknown, _):
+            return "There is not enough valid SMART data to judge this drive's health."
         }
     }
 

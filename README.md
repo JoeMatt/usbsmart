@@ -96,7 +96,7 @@ disk, read-write, exactly as it does without this driver.
 
 ## Downloadable releases
 
-[Download USBSmart 0.3.2 for Apple silicon](https://github.com/JoeMatt/usbsmart/releases/download/v0.3.2/USBSmart-0.3.2-arm64.dmg).
+[Download USBSmart 0.4.0 for Apple silicon](https://github.com/JoeMatt/usbsmart/releases/download/v0.4.0/USBSmart-0.4.0-arm64.dmg).
 Drag USBSmart into Applications. Open Driver Setup, activate the driver, then approve it in
 System Settings. Eject any mounted volumes before reconnecting the dock. The app requires
 macOS 14 or later and runs without a developer account or Xcode.

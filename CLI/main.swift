@@ -6,7 +6,7 @@
 
 import Foundation
 
-let toolVersion = "0.4.0"
+let toolVersion = "0.4.1"
 
 let usage = """
     usbsmart \(toolVersion): SMART data for SATA drives in USB docks. Read-only.

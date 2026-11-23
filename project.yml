@@ -7,10 +7,8 @@ settings:
   base:
     DEVELOPMENT_TEAM: S32Z3HMYVQ
     CODE_SIGN_STYLE: Automatic
-    # Bump both for any driver change: macOS will not replace an installed extension that has
-    # the same version.
-    MARKETING_VERSION: "0.4.0"
-    CURRENT_PROJECT_VERSION: "7"
+    MARKETING_VERSION: "0.4.1"
+    CURRENT_PROJECT_VERSION: "8"
 targets:
   USBSmartHost:
     type: application
@@ -66,6 +64,9 @@ targets:
       - Driver
     settings:
       base:
+        # This patch only changes the app and CLI. Bump both here when the driver changes.
+        MARKETING_VERSION: "0.4.0"
+        CURRENT_PROJECT_VERSION: "7"
         SDKROOT: driverkit
         DRIVERKIT_DEPLOYMENT_TARGET: "23.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.joemattiello.USBSmart.driver

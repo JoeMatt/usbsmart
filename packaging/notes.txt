@@ -6,4 +6,4 @@ Install: drag the app into Applications, open Driver setup, activate and approve
 
 Apple silicon, macOS 14 or later. SMART reads verified on a VIA Labs VL715 and all four bays of a Sabrent dock with a JMicron JMS561 (152d:1561). Other bridge IDs are listed as candidates. SMART reads do not write to the drive. macOS still controls ordinary filesystem access.
 
-Version 0.4.0 adds local scan history, a comparison with the previous valid scan, and JSON export for all connected drives. The app and CLI use scoped client entitlements to open the driver. Verify the downloads with SHA256SUMS.txt.
+Version 0.4.1 makes the CLI, app, and JSON export use the same health verdict. A readable report with all threshold values set to zero shows Unknown when the drive's own verdict is unavailable. Verify the downloads with SHA256SUMS.txt.

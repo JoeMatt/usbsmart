@@ -2,10 +2,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct DrivesView: View {
-    @ObservedObject var extensionModel: ExtensionModel
     @ObservedObject var model: DrivesModel
     @Environment(\.dismissWindow) private var dismissWindow
-    @State private var showDriver = false
     @State private var showHistory = false
     @State private var showExport = false
     @State private var exportDocument: ScanExport?
@@ -33,7 +31,7 @@ struct DrivesView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Reads health data only", systemImage: "lock.shield")
                         .font(.caption).foregroundStyle(.secondary)
-                    Button("Driver setup…") { showDriver = true }
+                    SettingsLink { Text("Driver setup…") }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
             }
         } detail: {
@@ -58,7 +56,7 @@ struct DrivesView: View {
                     Text("Connect a SATA drive in a listed USB dock. Open Driver setup to see the bridge compatibility list.")
                     Text("For the first use, activate the driver and approve it in System Settings, then reconnect the dock.")
                 } actions: {
-                    Button("Set up driver") { showDriver = true }
+                    SettingsLink { Text("Set up driver") }
                     Button("Refresh") { model.refresh() }.disabled(model.isReading || model.isSample)
                 }.padding()
             }
@@ -73,14 +71,13 @@ struct DrivesView: View {
                     .disabled(model.isSample)
                 Button { exportScan() } label: { Label("Export JSON", systemImage: "square.and.arrow.up") }
                     .disabled(model.lastRefresh == nil || model.isReading || model.isSample)
-                Button { showDriver = true } label: { Label("Driver setup", systemImage: "gearshape") }
+                SettingsLink { Label("Driver setup", systemImage: "gearshape") }
                 Button { dismissWindow(id: driveMonitorWindowID) } label: {
                     Label("Close to Menu Bar", systemImage: "xmark")
                 }
             }
         }
         .frame(minWidth: 900, minHeight: 600)
-        .sheet(isPresented: $showDriver) { driverSetup }
         .sheet(isPresented: $showHistory) {
             ScanHistoryView(history: model.history, selectedDriveId: selectedDriveId, error: model.historyError)
         }
@@ -110,8 +107,12 @@ struct DrivesView: View {
             exportError = error.localizedDescription
         }
     }
+}
 
-    private var driverSetup: some View {
+struct DriverSettingsView: View {
+    @ObservedObject var extensionModel: ExtensionModel
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Set up the driver").font(.title2.bold())
             Text("Keep USBSmart in Applications. Click Activate, then approve USBSmart under System Settings → General → Login Items & Extensions → Driver Extensions.")
@@ -121,7 +122,7 @@ struct DrivesView: View {
                 Button("Deactivate driver") { extensionModel.deactivate() }
             }
             Text(extensionModel.status).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
-            Text("The app can read a drive's identity and SMART pages. It cannot start self-tests, change drive settings or erase a drive.")
+            Text("Health scans read drive identity and SMART data.")
                 .font(.caption).foregroundStyle(.secondary)
             Divider()
             Text("Bridge compatibility").font(.headline)
@@ -141,7 +142,6 @@ struct DrivesView: View {
                     }
                 }
             }.frame(height: 190)
-            HStack { Spacer(); Button("Done") { showDriver = false }.keyboardShortcut(.defaultAction) }
         }.padding(24).frame(width: 520)
     }
 }

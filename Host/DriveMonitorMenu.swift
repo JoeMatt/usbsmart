@@ -66,6 +66,7 @@ struct DriveMonitorMenu: View {
             Text("Last scan: \(readAt.formatted(date: .omitted, time: .shortened))")
         }
         Button("Open USBSmart", action: showWindow)
+        SettingsLink { Text("Settings…") }
         Button("Refresh SMART") { model.refresh() }
             .disabled(model.isReading || model.isSample)
         if !model.isSample {

@@ -86,13 +86,17 @@ struct USBSmartApp: App {
 
     var body: some Scene {
         Window("USBSmart", id: driveMonitorWindowID) {
-            DrivesView(extensionModel: model, model: drives)
+            DrivesView(model: drives)
                 .onAppear {
                     if CommandLine.arguments.contains("--activate") { model.activate() }
                     else if CommandLine.arguments.contains("--deactivate") { model.deactivate() }
                 }
         }
         .defaultSize(width: 1120, height: 760)
+
+        Settings {
+            DriverSettingsView(extensionModel: model)
+        }
 
         MenuBarExtra {
             DriveMonitorMenu(model: drives)

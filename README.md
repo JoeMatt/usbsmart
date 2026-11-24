@@ -141,6 +141,14 @@ no supported disks were attached. The CLI returns 4 if any drive reports failure
 read was incomplete or failed, and 0 otherwise. The JSON document is available in all
 three cases.
 
+### Menu bar monitor
+
+USBSmart puts a SMART status icon in the macOS menu bar. Closing the window leaves
+the monitor running. Click the icon to see each drive's verdict, open its report, or
+refresh. A drive with an unknown verdict or an incomplete read gets an attention
+icon. While the app runs, it scans connected drives every five minutes by default.
+Turn off **Scan every 5 minutes** in the menu to pause periodic scans.
+
 ### Prometheus and Grafana
 
 `usbsmart --metrics` reads connected supported drives and writes Prometheus text to stdout.

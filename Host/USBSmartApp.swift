@@ -9,9 +9,11 @@
 //  user's.
 //
 
+import AppKit
 import SwiftUI
 import SystemExtensions
 
+let driveMonitorWindowID = "drive-monitor"
 let driverIdentifier = "com.joemattiello.USBSmart.driver"
 
 final class ExtensionModel: NSObject, ObservableObject, OSSystemExtensionRequestDelegate {
@@ -72,13 +74,18 @@ final class ExtensionModel: NSObject, ObservableObject, OSSystemExtensionRequest
     }
 }
 
+final class USBSmartAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+}
+
 @main
 struct USBSmartApp: App {
+    @NSApplicationDelegateAdaptor(USBSmartAppDelegate.self) private var appDelegate
     @StateObject private var model = ExtensionModel()
     @StateObject private var drives = DrivesModel()
 
     var body: some Scene {
-        WindowGroup("USBSmart") {
+        Window("USBSmart", id: driveMonitorWindowID) {
             DrivesView(extensionModel: model, model: drives)
                 .onAppear {
                     if CommandLine.arguments.contains("--activate") { model.activate() }
@@ -86,5 +93,12 @@ struct USBSmartApp: App {
                 }
         }
         .defaultSize(width: 1120, height: 760)
+
+        MenuBarExtra {
+            DriveMonitorMenu(model: drives)
+        } label: {
+            DriveMonitorLabel(model: drives)
+        }
+        .menuBarExtraStyle(.menu)
     }
 }

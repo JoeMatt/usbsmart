@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct DrivesView: View {
     @ObservedObject var extensionModel: ExtensionModel
     @ObservedObject var model: DrivesModel
+    @Environment(\.dismissWindow) private var dismissWindow
     @State private var showDriver = false
     @State private var showHistory = false
     @State private var showExport = false
@@ -73,6 +74,9 @@ struct DrivesView: View {
                 Button { exportScan() } label: { Label("Export JSON", systemImage: "square.and.arrow.up") }
                     .disabled(model.lastRefresh == nil || model.isReading || model.isSample)
                 Button { showDriver = true } label: { Label("Driver setup", systemImage: "gearshape") }
+                Button { dismissWindow(id: driveMonitorWindowID) } label: {
+                    Label("Close to Menu Bar", systemImage: "xmark")
+                }
             }
         }
         .frame(minWidth: 900, minHeight: 600)

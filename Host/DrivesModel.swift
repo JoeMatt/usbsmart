@@ -19,6 +19,14 @@ final class DrivesModel: ObservableObject {
     private var session: DASession?
     private var pending: DispatchWorkItem?
     private var refreshAgain = false
+    private static let scanInterval: TimeInterval = 5 * 60
+    private var scanTimer: Timer?
+    @Published var automaticScans = UserDefaults.standard.object(forKey: "automaticScans") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(automaticScans, forKey: "automaticScans")
+            scheduleAutomaticScans()
+        }
+    }
 
     init() {
         if let index = CommandLine.arguments.firstIndex(of: "--report-folder"),
@@ -48,11 +56,26 @@ final class DrivesModel: ObservableObject {
         // Disk Arbitration replays existing disks on registration. Coalesce that replay with
         // startup so the first scan doesn't immediately become its own comparison baseline.
         scheduleRefresh()
+        scheduleAutomaticScans()
     }
 
     deinit {
+        scanTimer?.invalidate()
         pending?.cancel()
         if let session { DASessionSetDispatchQueue(session, nil) }
+    }
+
+    private func scheduleAutomaticScans() {
+        scanTimer?.invalidate()
+        scanTimer = nil
+        guard automaticScans, !isSample else { return }
+        let timer = Timer(timeInterval: Self.scanInterval, repeats: true) { [weak self] _ in
+            guard let self, !self.isReading, !self.drives.isEmpty else { return }
+            self.refresh()
+        }
+        timer.tolerance = 30
+        RunLoop.main.add(timer, forMode: .common)
+        scanTimer = timer
     }
 
     private func scheduleRefresh() {

@@ -1,9 +1,8 @@
-USBSmart
+Check USB drive health from the macOS menu bar. Close the main window to keep the SMART monitor running, then click its icon to see drive verdicts, refresh, or reopen a report. USBSmart scans every five minutes by default. You can turn that off in the menu.
 
-A macOS app for reading SATA drive health through supported USB docks. Includes a drive sidebar, health summary, SMART attributes and a bundled command-line tool.
+- Press Command–Comma to open Settings and driver setup.
+- Run the bundled `usbsmart --metrics` command to export SMART readings for Prometheus and Grafana.
 
-Install: drag the app into Applications, open Driver setup, activate and approve the driver. Safely eject mounted volumes before reconnecting the dock.
+Requires an Apple silicon Mac with macOS 14 or later. Drag USBSmart into Applications. For a first install, open Settings, activate the driver, and approve it in System Settings. Eject any mounted volumes before reconnecting your dock.
 
-Apple silicon, macOS 14 or later. SMART reads verified on a VIA Labs VL715 and all four bays of a Sabrent dock with a JMicron JMS561 (152d:1561). Other bridge IDs are listed as candidates. SMART reads do not write to the drive. A self-test runs inside the drive and does not change stored data. macOS still controls ordinary filesystem access.
-
-Version 0.5.0 adds drive self-tests to the command-line tool: usbsmart diskN --selftest short|long|conveyance|abort starts or stops the drive's own background test, and --selftest-status shows progress, the self-test log and the ATA error count. Reports and JSON export include the same self-test data. This version updates the driver, so approve it again if macOS asks and reconnect the dock. Verify the downloads with SHA256SUMS.txt.
+If you already use 0.5.0, replace the app in Applications. This release uses the same driver. The DMG and app are signed with Developer ID and notarized by Apple. Use `SHA256SUMS.txt` to verify the downloads.

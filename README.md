@@ -111,7 +111,7 @@ disk, read-write, exactly as it does without this driver.
 
 ## Downloadable releases
 
-[Download USBSmart 0.5.0 for Apple silicon](https://github.com/JoeMatt/usbsmart/releases/download/v0.5.0/USBSmart-0.5.0-arm64.dmg).
+[Download USBSmart 0.5.1 for Apple silicon](https://github.com/JoeMatt/usbsmart/releases/download/v0.5.1/USBSmart-0.5.1-arm64.dmg).
 Drag USBSmart into Applications. Open Driver Setup, activate the driver, then approve it in
 System Settings. Eject any mounted volumes before reconnecting the dock. The app requires
 macOS 14 or later and runs without a developer account or Xcode.
@@ -147,7 +147,8 @@ USBSmart puts a SMART status icon in the macOS menu bar. Closing the window leav
 the monitor running. Click the icon to see each drive's verdict, open its report, or
 refresh. A drive with an unknown verdict or an incomplete read gets an attention
 icon. While the app runs, it scans connected drives every five minutes by default.
-Turn off **Scan every 5 minutes** in the menu to pause periodic scans.
+Turn off **Scan every 5 minutes** in the menu to pause periodic scans. Press
+**Command–Comma** to open Settings.
 
 ### Prometheus and Grafana
 

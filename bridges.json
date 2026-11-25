@@ -11,6 +11,7 @@
     {"key":"JMicron0579","vendor":"152d","product":"0579","name":"JMicron SATA bridge","verified":false},
     {"key":"JMicron0580","vendor":"152d","product":"0580","name":"JMicron SATA bridge","verified":false},
     {"key":"JMicron1561","vendor":"152d","product":"1561","name":"JMicron JMS561 (Sabrent SATA dock)","verified":true},
+    {"key":"JMicron0583","vendor":"152d","product":"0583","name":"JMicron JMS583 (SATA mode)","verified":true},
     {"key":"LucidPort5000","vendor":"1759","product":"5000","name":"LucidPort USB300","verified":false},
     {"key":"LucidPort5002","vendor":"1759","product":"5002","name":"LucidPort USB300","verified":false},
     {"key":"LucidPort5100","vendor":"1759","product":"5100","name":"LucidPort SATA bridge","verified":false},

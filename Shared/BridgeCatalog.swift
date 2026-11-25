@@ -21,6 +21,7 @@ let bridgeCatalog: [BridgeDefinition] = [
     BridgeDefinition(name: "JMicron SATA bridge", vendor: 0x152d, product: 0x0579, verified: false),
     BridgeDefinition(name: "JMicron SATA bridge", vendor: 0x152d, product: 0x0580, verified: false),
     BridgeDefinition(name: "JMicron JMS561 (Sabrent SATA dock)", vendor: 0x152d, product: 0x1561, verified: true),
+    BridgeDefinition(name: "JMicron JMS583 (SATA mode)", vendor: 0x152d, product: 0x0583, verified: true),
     BridgeDefinition(name: "LucidPort USB300", vendor: 0x1759, product: 0x5000, verified: false),
     BridgeDefinition(name: "LucidPort USB300", vendor: 0x1759, product: 0x5002, verified: false),
     BridgeDefinition(name: "LucidPort SATA bridge", vendor: 0x1759, product: 0x5100, verified: false),

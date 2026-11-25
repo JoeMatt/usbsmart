@@ -288,6 +288,7 @@ for every match.
 | `174c:55aa`, `174c:1153`, `174c:235c` | ASMedia SATA | Untested candidates |
 | `152d:0567`, `152d:0577`, `152d:0578`, `152d:0579`, `152d:0580` | JMicron SATA | Untested candidates |
 | `152d:1561` | JMicron JMS561 (Sabrent SATA dock) | SMART reads verified on four bays |
+| `152d:0583` | JMicron JMS583 (SATA mode) | Verified on hardware |
 | `1759:5000`, `1759:5002`, `1759:5100` | LucidPort SATA | Untested candidates |
 
 The catalog also includes exact USB IDs from a pinned
